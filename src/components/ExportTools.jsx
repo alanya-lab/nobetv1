@@ -17,18 +17,40 @@ const ExportTools = ({ schedule, staffList }) => {
         const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
         const monthTitle = format(selectedDate, 'MMMM yyyy', { locale: tr });
 
+        // Find max number of people assigned to any day
+        let maxAssigned = 2;
+        days.forEach(day => {
+            const dateString = format(day, 'yyyy-MM-dd');
+            const assigned = schedule[dateString] || [];
+            if (assigned.length > maxAssigned) {
+                maxAssigned = assigned.length;
+            }
+        });
+
         const rows = [];
 
-        // Header
-        rows.push(['Tarih', 'Gün', 'Nöbetçiler']);
+        // Header - separate column for each shift position
+        const header = ['Tarih', 'Gün'];
+        for (let i = 1; i <= maxAssigned; i++) {
+            header.push(`Nöbetçi ${i}`);
+        }
+        rows.push(header);
 
         days.forEach(day => {
             const dateString = format(day, 'yyyy-MM-dd');
             const assigned = schedule[dateString] || [];
             const dayName = format(day, 'EEEE', { locale: tr });
             const dateFormatted = format(day, 'd MMMM', { locale: tr });
-            const names = assigned.map(s => s.name || `${s.firstName} ${s.lastName}`).join(', ');
-            rows.push([dateFormatted, dayName, names || '-']);
+
+            const row = [dateFormatted, dayName];
+            for (let i = 0; i < maxAssigned; i++) {
+                if (assigned[i]) {
+                    row.push(assigned[i].name || `${assigned[i].firstName} ${assigned[i].lastName}`);
+                } else {
+                    row.push('-');
+                }
+            }
+            rows.push(row);
         });
 
         return { rows, monthTitle };

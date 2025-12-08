@@ -3,6 +3,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend, getDay 
 import { tr } from 'date-fns/locale';
 
 const UnavailabilityGrid = ({ staffList, setStaffList, selectedMonth }) => {
+    // 3 modes: 'unavailable' (preference), 'leave' (real leave - affects target), 'required' (must work)
     const [selectionMode, setSelectionMode] = useState('unavailable');
 
     const selectedDate = selectedMonth ? new Date(selectedMonth + '-01') : new Date();
@@ -17,6 +18,7 @@ const UnavailabilityGrid = ({ staffList, setStaffList, selectedMonth }) => {
                 if (staff.id !== staffId) return staff;
 
                 const unavailability = staff.unavailability || [];
+                const leaveDays = staff.leaveDays || [];
                 const requiredDays = staff.requiredDays || [];
 
                 if (selectionMode === 'unavailable') {
@@ -26,7 +28,20 @@ const UnavailabilityGrid = ({ staffList, setStaffList, selectedMonth }) => {
                         unavailability: isUnavailable
                             ? unavailability.filter(d => d !== dateString)
                             : [...unavailability, dateString],
-                        requiredDays: isUnavailable ? requiredDays : requiredDays.filter(d => d !== dateString)
+                        // Clear from other arrays
+                        leaveDays: leaveDays.filter(d => d !== dateString),
+                        requiredDays: requiredDays.filter(d => d !== dateString)
+                    };
+                } else if (selectionMode === 'leave') {
+                    const isLeave = leaveDays.includes(dateString);
+                    return {
+                        ...staff,
+                        leaveDays: isLeave
+                            ? leaveDays.filter(d => d !== dateString)
+                            : [...leaveDays, dateString],
+                        // Clear from other arrays
+                        unavailability: unavailability.filter(d => d !== dateString),
+                        requiredDays: requiredDays.filter(d => d !== dateString)
                     };
                 } else {
                     const isRequired = requiredDays.includes(dateString);
@@ -35,7 +50,9 @@ const UnavailabilityGrid = ({ staffList, setStaffList, selectedMonth }) => {
                         requiredDays: isRequired
                             ? requiredDays.filter(d => d !== dateString)
                             : [...requiredDays, dateString],
-                        unavailability: isRequired ? unavailability : unavailability.filter(d => d !== dateString)
+                        // Clear from other arrays
+                        unavailability: unavailability.filter(d => d !== dateString),
+                        leaveDays: leaveDays.filter(d => d !== dateString)
                     };
                 }
             })
@@ -43,6 +60,7 @@ const UnavailabilityGrid = ({ staffList, setStaffList, selectedMonth }) => {
     };
 
     const isUnavailable = (staff, dateString) => staff.unavailability?.includes(dateString);
+    const isLeave = (staff, dateString) => staff.leaveDays?.includes(dateString);
     const isRequired = (staff, dateString) => staff.requiredDays?.includes(dateString);
 
     const dayNames = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
@@ -83,14 +101,15 @@ const UnavailabilityGrid = ({ staffList, setStaffList, selectedMonth }) => {
                 </div>
             </div>
 
-            {/* Selection Mode Toggle */}
+            {/* Selection Mode Toggle - 3 BUTTONS */}
             <div style={{
                 display: 'flex',
                 gap: '8px',
                 marginBottom: '16px',
                 padding: '10px',
                 backgroundColor: 'var(--color-bg)',
-                borderRadius: '8px'
+                borderRadius: '8px',
+                flexWrap: 'wrap'
             }}>
                 <span style={{ fontWeight: '500', marginRight: '8px', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center' }}>Mod:</span>
                 <button
@@ -110,6 +129,22 @@ const UnavailabilityGrid = ({ staffList, setStaffList, selectedMonth }) => {
                     ✕ Müsait Değil
                 </button>
                 <button
+                    onClick={() => setSelectionMode('leave')}
+                    style={{
+                        padding: '8px 14px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontWeight: '600',
+                        fontSize: '0.85rem',
+                        backgroundColor: selectionMode === 'leave' ? 'rgba(245, 158, 11, 0.2)' : 'var(--color-surface)',
+                        color: selectionMode === 'leave' ? '#fbbf24' : 'var(--color-text-muted)',
+                        transition: 'all 0.2s ease'
+                    }}
+                >
+                    🏖️ İzinli
+                </button>
+                <button
                     onClick={() => setSelectionMode('required')}
                     style={{
                         padding: '8px 14px',
@@ -125,6 +160,26 @@ const UnavailabilityGrid = ({ staffList, setStaffList, selectedMonth }) => {
                 >
                     ✓ Nöbet Yazılsın
                 </button>
+            </div>
+
+            {/* Helper Text */}
+            <div style={{
+                marginBottom: '16px',
+                padding: '10px 12px',
+                backgroundColor: 'var(--color-bg)',
+                borderRadius: '6px',
+                fontSize: '0.8rem',
+                color: 'var(--color-text-muted)'
+            }}>
+                {selectionMode === 'unavailable' && (
+                    <span>🔴 <strong>Müsait Değil:</strong> Tercih olarak işaretlenir, nöbet hedefini ETKİLEMEZ</span>
+                )}
+                {selectionMode === 'leave' && (
+                    <span>🟡 <strong>İzinli:</strong> Gerçek izin günleri, 7+ gün ise nöbet hedefini DÜŞÜRÜR</span>
+                )}
+                {selectionMode === 'required' && (
+                    <span>🟢 <strong>Nöbet Yazılsın:</strong> Bu günlerde mutlaka nöbet atanır</span>
+                )}
             </div>
 
             <div style={{
@@ -196,6 +251,7 @@ const UnavailabilityGrid = ({ staffList, setStaffList, selectedMonth }) => {
                         {days.map((day) => {
                             const dateString = format(day, 'yyyy-MM-dd');
                             const unavailable = isUnavailable(staff, dateString);
+                            const leave = isLeave(staff, dateString);
                             const required = isRequired(staff, dateString);
                             const isWknd = isWeekend(day);
 
@@ -207,6 +263,10 @@ const UnavailabilityGrid = ({ staffList, setStaffList, selectedMonth }) => {
                                 bgColor = 'rgba(239, 68, 68, 0.15)';
                                 borderStyle = '2px solid #f87171';
                                 icon = <span style={{ color: '#f87171' }}>✕</span>;
+                            } else if (leave) {
+                                bgColor = 'rgba(245, 158, 11, 0.15)';
+                                borderStyle = '2px solid #fbbf24';
+                                icon = <span style={{ color: '#fbbf24' }}>🏖️</span>;
                             } else if (required) {
                                 bgColor = 'rgba(34, 197, 94, 0.15)';
                                 borderStyle = '2px solid #4ade80';
@@ -231,14 +291,18 @@ const UnavailabilityGrid = ({ staffList, setStaffList, selectedMonth }) => {
                                         fontSize: '0.9rem'
                                     }}
                                     onMouseEnter={(e) => {
-                                        if (!unavailable && !required) {
-                                            e.currentTarget.style.backgroundColor = selectionMode === 'unavailable'
-                                                ? 'rgba(239, 68, 68, 0.1)'
-                                                : 'rgba(34, 197, 94, 0.1)';
+                                        if (!unavailable && !leave && !required) {
+                                            if (selectionMode === 'unavailable') {
+                                                e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
+                                            } else if (selectionMode === 'leave') {
+                                                e.currentTarget.style.backgroundColor = 'rgba(245, 158, 11, 0.1)';
+                                            } else {
+                                                e.currentTarget.style.backgroundColor = 'rgba(34, 197, 94, 0.1)';
+                                            }
                                         }
                                     }}
                                     onMouseLeave={(e) => {
-                                        if (!unavailable && !required) {
+                                        if (!unavailable && !leave && !required) {
                                             e.currentTarget.style.backgroundColor = bgColor;
                                         }
                                     }}
@@ -268,7 +332,13 @@ const UnavailabilityGrid = ({ staffList, setStaffList, selectedMonth }) => {
                     <div style={{ width: '16px', height: '16px', backgroundColor: 'rgba(239, 68, 68, 0.2)', border: '2px solid #f87171', borderRadius: '3px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <span style={{ color: '#f87171', fontSize: '0.6rem' }}>✕</span>
                     </div>
-                    <span>Müsait Değil</span>
+                    <span>Müsait Değil (Tercih)</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ width: '16px', height: '16px', backgroundColor: 'rgba(245, 158, 11, 0.2)', border: '2px solid #fbbf24', borderRadius: '3px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: '0.5rem' }}>🏖️</span>
+                    </div>
+                    <span>İzinli (Hedefi Etkiler)</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <div style={{ width: '16px', height: '16px', backgroundColor: 'rgba(34, 197, 94, 0.2)', border: '2px solid #4ade80', borderRadius: '3px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

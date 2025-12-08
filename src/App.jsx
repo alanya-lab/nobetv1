@@ -88,7 +88,7 @@ function App() {
                         WebkitTextFillColor: 'transparent',
                         backgroundClip: 'text'
                     }}>
-                        ENT Liste Oluşturucu
+                        Vardiya Çizelgesi
                     </h1>
                 </div>
                 <p style={{
@@ -188,7 +188,7 @@ function App() {
                 fontSize: '0.8rem'
             }}>
                 <p style={{ margin: 0 }}>
-                    ENT Çizelgecisi • {new Date().getFullYear()}
+                    Vardiya Çizelgesi v2.0 • {new Date().getFullYear()}
                 </p>
             </footer>
         </div>
@@ -196,4 +196,3 @@ function App() {
 }
 
 export default App;
-

@@ -1,36 +1,73 @@
-import { format, getDaysInMonth, startOfMonth, addDays, getDay, isSameDay, isWeekend } from 'date-fns';
+import { format, getDaysInMonth, startOfMonth, addDays, getDay, isSameDay, isWeekend, differenceInDays } from 'date-fns';
+
+// Minimum leave threshold to affect target (7 days)
+const LEAVE_THRESHOLD = 7;
 
 /**
- * Calculate target shifts based on SENIORITY (1-10 scale)
+ * Calculate target shifts based on SENIORITY (1-10 scale) AND leave days
  * Seniority 1 = Most junior, gets MOST shifts
  * Seniority 10 = Most senior, gets LEAST shifts
  * 
- * Proportional scaling: automatically adjusts based on total needs and staff count
+ * Only LEAVE days (not "unavailable" preference days) affect the target
+ * And only if leave days >= LEAVE_THRESHOLD (7 days)
  */
-const calculateSeniorityTargets = (staffList, totalShiftsNeeded) => {
+const calculateSeniorityTargets = (staffList, totalShiftsNeeded, daysInMonth) => {
     if (staffList.length === 0) return {};
 
     // Seniority weight: lower seniority = higher weight (more shifts)
     // Seniority 1 -> weight 10, Seniority 10 -> weight 1
     const getWeight = (seniority) => 11 - seniority;
 
-    // Calculate total weighted value
-    let totalWeight = 0;
-    staffList.forEach(staff => {
-        totalWeight += getWeight(staff.seniority);
+    // Calculate each staff's leave days and weighted value
+    const staffData = staffList.map(staff => {
+        // Only count LEAVE days (not unavailability which is just preference)
+        const leaveDays = staff.leaveDays?.length || 0;
+        const activeDays = daysInMonth - leaveDays;
+
+        // Only apply availability ratio if leave >= threshold
+        const availabilityRatio = leaveDays >= LEAVE_THRESHOLD
+            ? activeDays / daysInMonth
+            : 1; // No reduction if less than threshold
+
+        const weight = getWeight(staff.seniority);
+        const adjustedWeight = weight * availabilityRatio;
+
+        return {
+            id: staff.id,
+            weight,
+            activeDays,
+            leaveDays,
+            availabilityRatio,
+            adjustedWeight,
+            targetReduced: leaveDays >= LEAVE_THRESHOLD
+        };
     });
 
-    // Base unit: how many shifts per weight point
-    const baseUnit = totalShiftsNeeded / totalWeight;
+    // Calculate total adjusted weight
+    const totalAdjustedWeight = staffData.reduce((sum, s) => sum + s.adjustedWeight, 0);
+
+    // Base unit: how many shifts per adjusted weight point
+    const baseUnit = totalShiftsNeeded / totalAdjustedWeight;
 
     // Calculate individual targets
     const targets = {};
-    staffList.forEach(staff => {
-        const weight = getWeight(staff.seniority);
-        targets[staff.id] = Math.round(baseUnit * weight);
+    const targetDetails = {};
+
+    staffData.forEach(data => {
+        const rawTarget = baseUnit * data.adjustedWeight;
+        const target = Math.round(rawTarget);
+        targets[data.id] = target;
+        targetDetails[data.id] = {
+            target,
+            rawTarget,
+            activeDays: data.activeDays,
+            leaveDays: data.leaveDays,
+            availabilityRatio: data.availabilityRatio,
+            targetReduced: data.targetReduced
+        };
     });
 
-    return targets;
+    return { targets, targetDetails };
 };
 
 /**
@@ -49,6 +86,7 @@ export const generateSchedule = (staffList, constraints, selectedDate = new Date
     const daysInMonth = getDaysInMonth(selectedDate);
 
     const schedule = {}; // DateString (YYYY-MM-DD) -> Array of Staff Objects
+    const logs = []; // Algorithm decision logs
 
     // Calculate total shifts needed for the month
     let totalShiftsNeeded = 0;
@@ -58,8 +96,24 @@ export const generateSchedule = (staffList, constraints, selectedDate = new Date
         totalShiftsNeeded += constraints.dailyNeeds[dayName] || 2;
     }
 
-    // Calculate seniority-based targets (proportional)
-    const seniorityTargets = calculateSeniorityTargets(staffList, totalShiftsNeeded);
+    // Calculate seniority-based targets (adjusted for LEAVE days only, not preferences)
+    const { targets: seniorityTargets, targetDetails } = calculateSeniorityTargets(
+        staffList,
+        totalShiftsNeeded,
+        daysInMonth
+    );
+
+    // Log target adjustments for staff with significant leave
+    staffList.forEach(staff => {
+        const details = targetDetails[staff.id];
+        if (details && details.targetReduced) {
+            logs.push({
+                type: 'info',
+                icon: '🏖️',
+                message: `${staff.name || staff.firstName}: ${details.leaveDays} gün izinli (≥${LEAVE_THRESHOLD}), hedef ${details.target} nöbete düşürüldü`
+            });
+        }
+    });
 
     // Initialize stats with personalized targets based on seniority
     const staffStats = {};
@@ -73,17 +127,31 @@ export const generateSchedule = (staffList, constraints, selectedDate = new Date
             seniorityGroup: getSeniorityGroup(staff.seniority),
             daysAssigned: {
                 'Monday': 0, 'Tuesday': 0, 'Wednesday': 0, 'Thursday': 0, 'Friday': 0, 'Saturday': 0, 'Sunday': 0
-            }
+            },
+            skippedReasons: []
         };
     });
 
     const getDayName = (date) => format(date, 'EEEE');
+
+    // Calculate required gap based on rest hours
+    // Example: 24h shift + 72h rest = shift ends next day, then 3 days rest = 4 day gap minimum
+    const shiftEndDay = 1; // Shift ends the next day
+    const restDays = Math.ceil(constraints.minRestHours / 24);
+    const requiredDayGap = shiftEndDay + restDays;
+
+    logs.push({
+        type: 'info',
+        icon: '⏰',
+        message: `Dinlenme: ${constraints.minRestHours} saat → Bir nöbet sonrası ${requiredDayGap} gün sonra yeni nöbet`
+    });
 
     for (let i = 0; i < daysInMonth; i++) {
         const currentDate = addDays(currentMonthStart, i);
         const dateString = format(currentDate, 'yyyy-MM-dd');
         const dayName = getDayName(currentDate);
         const isWknd = isWeekend(currentDate);
+        const dayOfMonth = i + 1;
 
         // Determine needs for this day
         const neededCount = constraints.dailyNeeds[dayName] || 2;
@@ -92,16 +160,24 @@ export const generateSchedule = (staffList, constraints, selectedDate = new Date
         let candidates = staffList.filter(staff => {
             const stats = staffStats[staff.id];
 
-            // 1. Unavailability - check personalized unavailable dates
-            if (staff.unavailability && staff.unavailability.includes(dateString)) return false;
+            // 1. Unavailability - check BOTH unavailable (preference) AND leave days
+            // Both prevent assignment, but only leave affects target
+            if (staff.unavailability && staff.unavailability.includes(dateString)) {
+                return false;
+            }
+            if (staff.leaveDays && staff.leaveDays.includes(dateString)) {
+                return false;
+            }
 
             // 2. Hard cap - max shifts constraint
-            if (stats.shiftCount >= constraints.maxShiftsPerMonth) return false;
+            if (stats.shiftCount >= constraints.maxShiftsPerMonth) {
+                return false;
+            }
 
-            // 3. Rest Time (Consecutive days check)
-            if (constraints.minRestHours > 12 && stats.lastShiftDate) {
-                const yesterday = addDays(currentDate, -1);
-                if (isSameDay(stats.lastShiftDate, yesterday)) {
+            // 3. Rest Time - proper calculation including shift duration
+            if (stats.lastShiftDate) {
+                const daysSinceLastShift = differenceInDays(currentDate, stats.lastShiftDate);
+                if (daysSinceLastShift < requiredDayGap) {
                     return false;
                 }
             }
@@ -109,43 +185,83 @@ export const generateSchedule = (staffList, constraints, selectedDate = new Date
             return true;
         });
 
+        // Check if we have enough candidates
+        if (candidates.length < neededCount) {
+            logs.push({
+                type: 'warning',
+                icon: '⚠️',
+                message: `${dayOfMonth}. gün: ${neededCount} kişi gerekli ama sadece ${candidates.length} müsait`
+            });
+        }
+
         // Scoring System - Higher score = Better candidate
         const scoredCandidates = candidates.map(staff => {
             let score = 1000;
             const stats = staffStats[staff.id];
 
             // --- 0. Required Days - Massive priority ---
-            // If this staff member MUST be assigned on this day, give huge boost
             if (staff.requiredDays && staff.requiredDays.includes(dateString)) {
                 score += 5000;
             }
 
             // --- 1. Seniority-Based Target System ---
-            // Strong boost if below personal target (based on seniority)
             const targetDiff = stats.targetShifts - stats.shiftCount;
             if (targetDiff > 0) {
-                // More deficit = higher score
                 score += targetDiff * 400;
             } else {
-                // Exceeded target, strong penalty
-                score -= Math.abs(targetDiff) * 600;
+                // Exceeded target - HUGE penalty to force fair distribution
+                // Only assign if absolutely no one else is available
+                score -= Math.abs(targetDiff) * 5000;
             }
 
-            // --- 2. Weekend Distribution ---
-            // Senior staff (high seniority number) get less weekend shifts
+            // --- 2. Shift Spread Bonus ---
+            if (stats.lastShiftDate) {
+                const daysSinceLastShift = differenceInDays(currentDate, stats.lastShiftDate);
+                score += daysSinceLastShift * 150;
+            } else {
+                score += 500;
+            }
+
+            // --- 3. Weekend Distribution (STRICTER) ---
+            // Senior staff (high seniority number) get significantly less weekend shifts
             if (isWknd) {
-                // Seniority 10 -> -100 penalty, Seniority 1 -> -10 penalty
-                score -= staff.seniority * 10;
+                // Exponential penalty for seniority (power of 4 for sharper differences)
+                // Seniority 1 -> 1 penalty
+                // Seniority 2 -> 16 penalty
+                // Seniority 3 -> 81 penalty
+                // Seniority 5 -> 625 penalty
+                // Seniority 10 -> 10,000 penalty
+                score -= Math.pow(staff.seniority, 4);
 
-                // Balance weekend shifts
-                score -= stats.weekendShifts * 100;
+                // Balance weekend shifts - MASSIVE penalty for accumulating weekend shifts
+                // 1st weekend: 5000 penalty
+                // 2nd weekend: 10000 penalty
+                // 3rd weekend: 15000 penalty (nearly impossible)
+                score -= stats.weekendShifts * 5000;
+
+                // SENIORITY HIERARCHY ENFORCEMENT
+                // Rule: Senior staff (higher seniority) CANNOT have more weekend shifts than junior staff
+                // Check if this person has >= weekend shifts compared to anyone less senior
+                const myWeekendShifts = stats.weekendShifts;
+                staffList.forEach(otherStaff => {
+                    if (otherStaff.id !== staff.id && otherStaff.seniority < staff.seniority) {
+                        const otherStats = staffStats[otherStaff.id];
+                        const otherWeekendShifts = otherStats.weekendShifts;
+
+                        // If I (more senior) have >= weekend shifts than someone less senior
+                        // Apply MASSIVE penalty
+                        if (myWeekendShifts >= otherWeekendShifts) {
+                            score -= 20000; // HUGE penalty to prevent hierarchy violation
+                        }
+                    }
+                });
             }
 
-            // --- 3. Day of Week Variety ---
+            // --- 4. Day of Week Variety ---
             const dayCount = stats.daysAssigned[dayName] || 0;
             score -= dayCount * 120;
 
-            // --- 4. Small randomness to break ties ---
+            // --- 5. Small randomness to break ties ---
             score += Math.floor(Math.random() * 20);
 
             return { staff, score };
@@ -174,12 +290,50 @@ export const generateSchedule = (staffList, constraints, selectedDate = new Date
             }
         }
 
+        // Log if day couldn't be fully filled
+        if (assignedForDay.length < neededCount) {
+            logs.push({
+                type: 'error',
+                icon: '❌',
+                message: `${dayOfMonth}. gün: ${neededCount - assignedForDay.length} pozisyon doldurulamadı!`
+            });
+        }
+
         schedule[dateString] = assignedForDay;
     }
 
-    // Attach final stats to schedule for Statistics component
+    // Final summary logs
+    const totalAssigned = Object.values(schedule).reduce((sum, day) => {
+        if (Array.isArray(day)) return sum + day.length;
+        return sum;
+    }, 0);
+
+    logs.unshift({
+        type: 'success',
+        icon: '✅',
+        message: `Toplam ${totalAssigned}/${totalShiftsNeeded} nöbet başarıyla atandı`
+    });
+
+    // Add individual staff summaries for those who differ from target
+    staffList.forEach(staff => {
+        const stats = staffStats[staff.id];
+        const diff = stats.shiftCount - stats.targetShifts;
+        if (diff !== 0) {
+            const diffText = diff > 0 ? `+${diff}` : `${diff}`;
+            logs.push({
+                type: diff > 0 ? 'info' : 'warning',
+                icon: diff > 0 ? '📈' : '📉',
+                message: `${staff.name || staff.firstName}: Hedef ${stats.targetShifts}, Gerçekleşen ${stats.shiftCount} (${diffText})`
+            });
+        }
+    });
+
+    // Attach final stats and logs to schedule
     schedule._staffStats = staffStats;
     schedule._totalShiftsNeeded = totalShiftsNeeded;
+    schedule._logs = logs;
+    schedule._targetDetails = targetDetails;
+    schedule._leaveThreshold = LEAVE_THRESHOLD;
 
     return schedule;
 };
