@@ -270,23 +270,36 @@ export const generateSchedule = (staffList, constraints, selectedDate = new Date
         // Sort by score descending
         scoredCandidates.sort((a, b) => b.score - a.score);
 
-        // Assign top N
+        // Assign top N with seniority sum check
         const assignedForDay = [];
-        for (let j = 0; j < neededCount; j++) {
-            if (scoredCandidates[j]) {
-                const selectedStaff = scoredCandidates[j].staff;
-                assignedForDay.push(selectedStaff);
+        const maxSenioritySum = constraints.maxSenioritySum || 0;
 
-                // Update stats
-                const stats = staffStats[selectedStaff.id];
-                stats.shiftCount++;
-                stats.lastShiftDate = currentDate;
-                stats.daysAssigned[dayName]++;
-                if (isWknd) {
-                    stats.weekendShifts++;
-                } else {
-                    stats.weekdayShifts++;
+        for (let j = 0; j < scoredCandidates.length && assignedForDay.length < neededCount; j++) {
+            const candidate = scoredCandidates[j].staff;
+
+            // If this is not the first assignment AND maxSenioritySum is set
+            if (assignedForDay.length > 0 && maxSenioritySum > 0) {
+                // Calculate current seniority sum
+                const currentSum = assignedForDay.reduce((sum, s) => sum + s.seniority, 0);
+                const newSum = currentSum + candidate.seniority;
+
+                // Skip if adding this person exceeds max
+                if (newSum > maxSenioritySum) {
+                    continue; // Try next candidate
                 }
+            }
+
+            assignedForDay.push(candidate);
+
+            // Update stats
+            const stats = staffStats[candidate.id];
+            stats.shiftCount++;
+            stats.lastShiftDate = currentDate;
+            stats.daysAssigned[dayName]++;
+            if (isWknd) {
+                stats.weekendShifts++;
+            } else {
+                stats.weekdayShifts++;
             }
         }
 

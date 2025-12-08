@@ -30,6 +30,7 @@ function App() {
             minShiftsPerMonth: 0,
             maxShiftsPerMonth: 20,
             minRestHours: 11,
+            maxSenioritySum: 0,
             selectedMonth: new Date().toISOString().slice(0, 7)
         };
     });

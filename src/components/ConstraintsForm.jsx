@@ -125,7 +125,7 @@ const ConstraintsForm = ({ constraints, setConstraints }) => {
                         value={constraints.minRestHours}
                         onChange={handleInputChange}
                         min="0"
-                        max="48"
+                        max="72"
                     />
                     <p style={{
                         marginTop: '4px',
@@ -133,6 +133,27 @@ const ConstraintsForm = ({ constraints, setConstraints }) => {
                         color: 'var(--color-text-muted)'
                     }}>
                         {constraints.minRestHours > 12 ? '(Arka arkaya nöbet yok)' : '(Arka arkaya nöbet izinli)'}
+                    </p>
+                </div>
+
+                <div>
+                    <label>Max Kıdem Toplamı</label>
+                    <input
+                        type="number"
+                        name="maxSenioritySum"
+                        value={constraints.maxSenioritySum || 0}
+                        onChange={handleInputChange}
+                        min="0"
+                        max="20"
+                    />
+                    <p style={{
+                        marginTop: '4px',
+                        fontSize: '0.75rem',
+                        color: 'var(--color-text-muted)'
+                    }}>
+                        {constraints.maxSenioritySum > 0
+                            ? `(Nöbetçi kıdem toplamı max ${constraints.maxSenioritySum})`
+                            : '(0 = Sınır yok)'}
                     </p>
                 </div>
             </div>
