@@ -213,6 +213,42 @@ export const generateSchedule = (staffList, constraints, selectedDate = new Date
                 }
             }
 
+            // --- 0.8 Urgency Score (NEW) ---
+            // Prioritize staff who have limited remaining available days to fulfill their target
+            // This fixes the issue where staff with end-of-month leave miss their targets
+            const remainingTarget = stats.targetShifts - stats.shiftCount;
+            if (remainingTarget > 0) {
+                // Calculate remaining available days from tomorrow onwards
+                let remainingAvailableDays = 0;
+                for (let k = i + 1; k < daysInMonth; k++) {
+                    const futureDate = addDays(currentMonthStart, k);
+                    const futureDateString = format(futureDate, 'yyyy-MM-dd');
+
+                    // Check availability
+                    const isUnavailable = staff.unavailability && staff.unavailability.includes(futureDateString);
+                    const isLeave = staff.leaveDays && staff.leaveDays.includes(futureDateString);
+
+                    if (!isUnavailable && !isLeave) {
+                        remainingAvailableDays++;
+                    }
+                }
+
+                // Avoid division by zero
+                const safeRemainingDays = remainingAvailableDays === 0 ? 0.5 : remainingAvailableDays;
+
+                // Urgency Ratio: Higher means more urgent
+                // Example: Needs 4 shifts, has 5 days left -> 0.8 (Very Urgent)
+                // Example: Needs 4 shifts, has 20 days left -> 0.2 (Not Urgent)
+                const urgencyRatio = remainingTarget / safeRemainingDays;
+
+                // Apply exponential bonus for high urgency
+                if (urgencyRatio > 0.5) {
+                    score += urgencyRatio * 8000; // Massive boost for high urgency
+                } else {
+                    score += urgencyRatio * 2000; // Moderate boost for normal progress
+                }
+            }
+
             // --- 1. Seniority-Based Target System ---
             const targetDiff = stats.targetShifts - stats.shiftCount;
             if (targetDiff > 0) {
@@ -338,6 +374,81 @@ export const generateSchedule = (staffList, constraints, selectedDate = new Date
 
         schedule[dateString] = assignedForDay;
     }
+
+    // --- ANOMALY ANALYSIS ---
+    // Check for seniority hierarchy violations and explain them
+    const analyzeAnomalies = () => {
+        const staffArray = Object.values(staffStats);
+        // Sort by seniority (1 = Junior, 10 = Senior)
+        // We expect Juniors to have MORE shifts than Seniors
+        staffArray.sort((a, b) => {
+            const staffA = staffList.find(s => s.id === a.id);
+            const staffB = staffList.find(s => s.id === b.id);
+            return staffA.seniority - staffB.seniority;
+        });
+
+        for (let i = 0; i < staffArray.length; i++) {
+            for (let j = i + 1; j < staffArray.length; j++) {
+                const junior = staffArray[i]; // Lower seniority number (more junior)
+                const senior = staffArray[j]; // Higher seniority number (more senior)
+
+                const juniorStaff = staffList.find(s => s.id === junior.id);
+                const seniorStaff = staffList.find(s => s.id === senior.id);
+
+                // Skip if seniority is same
+                if (juniorStaff.seniority === seniorStaff.seniority) continue;
+
+                // Check 1: Total Shifts Anomaly
+                // Junior has FEWER shifts than Senior (Unexpected)
+                if (junior.shiftCount < senior.shiftCount) {
+                    const diff = senior.shiftCount - junior.shiftCount;
+
+                    // Analyze reasons for Junior
+                    const reasons = [];
+
+                    // 1. Unavailability
+                    const unavailableCount = juniorStaff.unavailability?.filter(d => d.startsWith(format(currentMonthStart, 'yyyy-MM'))).length || 0;
+                    if (unavailableCount > 0) reasons.push(`${unavailableCount} gün müsait değil`);
+
+                    // 2. Leave
+                    const leaveCount = juniorStaff.leaveDays?.filter(d => d.startsWith(format(currentMonthStart, 'yyyy-MM'))).length || 0;
+                    if (leaveCount > 0) reasons.push(`${leaveCount} gün izinli`);
+
+                    // 3. Max Shifts Cap
+                    if (junior.shiftCount >= constraints.maxShiftsPerMonth) reasons.push(`Max nöbet sınırına (${constraints.maxShiftsPerMonth}) ulaştı`);
+
+                    logs.push({
+                        type: 'warning',
+                        icon: '⚠️',
+                        message: `ANOMALİ: ${juniorStaff.name} (Kıdem ${juniorStaff.seniority}), ${seniorStaff.name}'den (Kıdem ${seniorStaff.seniority}) daha az nöbet tuttu (${junior.shiftCount} vs ${senior.shiftCount}).`,
+                        details: reasons.length > 0 ? `Sebep: ${reasons.join(', ')}` : 'Sebep: Algoritma dağılımı veya dinlenme kısıtlamaları.'
+                    });
+                }
+
+                // Check 2: Weekend Shifts Anomaly
+                // Junior has FEWER weekend shifts than Senior (Unexpected)
+                if (junior.weekendShifts < senior.weekendShifts) {
+                    // Analyze reasons
+                    const reasons = [];
+                    const unavailableWknd = juniorStaff.unavailability?.filter(d => {
+                        const date = new Date(d);
+                        return isWeekend(date) && d.startsWith(format(currentMonthStart, 'yyyy-MM'));
+                    }).length || 0;
+
+                    if (unavailableWknd > 0) reasons.push(`${unavailableWknd} haftasonu günü müsait değil`);
+
+                    logs.push({
+                        type: 'warning',
+                        icon: '⚠️',
+                        message: `ANOMALİ: ${juniorStaff.name} (Kıdem ${juniorStaff.seniority}), ${seniorStaff.name}'den (Kıdem ${seniorStaff.seniority}) daha az haftasonu tuttu (${junior.weekendShifts} vs ${senior.weekendShifts}).`,
+                        details: reasons.length > 0 ? `Sebep: ${reasons.join(', ')}` : 'Sebep: Algoritma dağılımı.'
+                    });
+                }
+            }
+        }
+    };
+
+    analyzeAnomalies();
 
     // Final summary logs
     const totalAssigned = Object.values(schedule).reduce((sum, day) => {
