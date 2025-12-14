@@ -194,8 +194,8 @@ export const generateSchedule = (staffList, constraints, selectedDate = new Date
             });
         }
 
-        // Scoring System - Higher score = Better candidate
-        const scoredCandidates = candidates.map(staff => {
+        // Helper to calculate score for a candidate
+        const calculateScore = (staff) => {
             let score = 1000;
             const stats = staffStats[staff.id];
 
@@ -204,13 +204,20 @@ export const generateSchedule = (staffList, constraints, selectedDate = new Date
                 score += 5000;
             }
 
+            // --- 0.5 Beneficial Days (NEW) ---
+            if (constraints.beneficialDays && constraints.beneficialDays.includes(dayName)) {
+                const threshold = constraints.beneficialDaysThreshold || 4;
+                if (staff.seniority >= threshold) {
+                    // Gradient bonus: Higher seniority = Higher bonus
+                    score += staff.seniority * 1000;
+                }
+            }
+
             // --- 1. Seniority-Based Target System ---
             const targetDiff = stats.targetShifts - stats.shiftCount;
             if (targetDiff > 0) {
                 score += targetDiff * 400;
             } else {
-                // Exceeded target - HUGE penalty to force fair distribution
-                // Only assign if absolutely no one else is available
                 score -= Math.abs(targetDiff) * 5000;
             }
 
@@ -223,35 +230,17 @@ export const generateSchedule = (staffList, constraints, selectedDate = new Date
             }
 
             // --- 3. Weekend Distribution (STRICTER) ---
-            // Senior staff (high seniority number) get significantly less weekend shifts
             if (isWknd) {
-                // Exponential penalty for seniority (power of 4 for sharper differences)
-                // Seniority 1 -> 1 penalty
-                // Seniority 2 -> 16 penalty
-                // Seniority 3 -> 81 penalty
-                // Seniority 5 -> 625 penalty
-                // Seniority 10 -> 10,000 penalty
                 score -= Math.pow(staff.seniority, 4);
-
-                // Balance weekend shifts - MASSIVE penalty for accumulating weekend shifts
-                // 1st weekend: 5000 penalty
-                // 2nd weekend: 10000 penalty
-                // 3rd weekend: 15000 penalty (nearly impossible)
                 score -= stats.weekendShifts * 5000;
 
                 // SENIORITY HIERARCHY ENFORCEMENT
-                // Rule: Senior staff (higher seniority) CANNOT have more weekend shifts than junior staff
-                // Check if this person has >= weekend shifts compared to anyone less senior
                 const myWeekendShifts = stats.weekendShifts;
                 staffList.forEach(otherStaff => {
                     if (otherStaff.id !== staff.id && otherStaff.seniority < staff.seniority) {
                         const otherStats = staffStats[otherStaff.id];
-                        const otherWeekendShifts = otherStats.weekendShifts;
-
-                        // If I (more senior) have >= weekend shifts than someone less senior
-                        // Apply MASSIVE penalty
-                        if (myWeekendShifts >= otherWeekendShifts) {
-                            score -= 20000; // HUGE penalty to prevent hierarchy violation
+                        if (myWeekendShifts >= otherStats.weekendShifts) {
+                            score -= 20000;
                         }
                     }
                 });
@@ -261,37 +250,72 @@ export const generateSchedule = (staffList, constraints, selectedDate = new Date
             const dayCount = stats.daysAssigned[dayName] || 0;
             score -= dayCount * 120;
 
-            // --- 5. Small randomness to break ties ---
+            // --- 5. Small randomness ---
             score += Math.floor(Math.random() * 20);
 
-            return { staff, score };
-        });
+            return score;
+        };
 
-        // Sort by score descending
-        scoredCandidates.sort((a, b) => b.score - a.score);
-
-        // Assign top N with seniority sum check
         const assignedForDay = [];
-        const maxSenioritySum = constraints.maxSenioritySum || 0;
 
-        for (let j = 0; j < scoredCandidates.length && assignedForDay.length < neededCount; j++) {
-            const candidate = scoredCandidates[j].staff;
-
-            // If this is not the first assignment AND maxSenioritySum is set
-            if (assignedForDay.length > 0 && maxSenioritySum > 0) {
-                // Calculate current seniority sum
-                const currentSum = assignedForDay.reduce((sum, s) => sum + s.seniority, 0);
-                const newSum = currentSum + candidate.seniority;
-
-                // Skip if adding this person exceeds max
-                if (newSum > maxSenioritySum) {
-                    continue; // Try next candidate
+        // SLOT SYSTEM LOGIC
+        if (constraints.slotSystem && constraints.slotSystem.enabled) {
+            for (let slotIndex = 0; slotIndex < neededCount; slotIndex++) {
+                // Determine allowed seniorities for this slot
+                let allowedSeniorities = [];
+                if (slotIndex === 0) {
+                    allowedSeniorities = constraints.slotSystem.slot1Seniorities || [];
+                } else if (slotIndex === 1) {
+                    allowedSeniorities = constraints.slotSystem.slot2Seniorities || [];
+                } else {
+                    // Fallback for extra slots (if neededCount > 2): use all seniorities
+                    allowedSeniorities = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
                 }
+
+                // Filter candidates for this slot
+                const slotCandidates = candidates.filter(staff => {
+                    // Must be in allowed seniorities
+                    if (!allowedSeniorities.includes(staff.seniority)) return false;
+                    // Must not be already assigned today
+                    if (assignedForDay.find(s => s.id === staff.id)) return false;
+                    return true;
+                });
+
+                if (slotCandidates.length === 0) {
+                    logs.push({
+                        type: 'warning',
+                        icon: '⚠️',
+                        message: `${dayOfMonth}. gün Slot ${slotIndex + 1}: Uygun kriterde personel bulunamadı (Boş bırakıldı)`
+                    });
+                    continue;
+                }
+
+                // Score and pick best
+                const scoredSlotCandidates = slotCandidates.map(staff => ({
+                    staff,
+                    score: calculateScore(staff)
+                }));
+
+                scoredSlotCandidates.sort((a, b) => b.score - a.score);
+                assignedForDay.push(scoredSlotCandidates[0].staff);
             }
+        }
+        // NORMAL LOGIC (No Slot System)
+        else {
+            const scoredCandidates = candidates.map(staff => ({
+                staff,
+                score: calculateScore(staff)
+            }));
 
-            assignedForDay.push(candidate);
+            scoredCandidates.sort((a, b) => b.score - a.score);
 
-            // Update stats
+            for (let j = 0; j < scoredCandidates.length && assignedForDay.length < neededCount; j++) {
+                assignedForDay.push(scoredCandidates[j].staff);
+            }
+        }
+
+        // Update stats for assigned staff
+        assignedForDay.forEach(candidate => {
             const stats = staffStats[candidate.id];
             stats.shiftCount++;
             stats.lastShiftDate = currentDate;
@@ -301,7 +325,7 @@ export const generateSchedule = (staffList, constraints, selectedDate = new Date
             } else {
                 stats.weekdayShifts++;
             }
-        }
+        });
 
         // Log if day couldn't be fully filled
         if (assignedForDay.length < neededCount) {

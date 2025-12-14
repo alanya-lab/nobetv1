@@ -30,8 +30,14 @@ function App() {
             minShiftsPerMonth: 0,
             maxShiftsPerMonth: 20,
             minRestHours: 11,
-            maxSenioritySum: 0,
-            selectedMonth: new Date().toISOString().slice(0, 7)
+            selectedMonth: new Date().toISOString().slice(0, 7),
+            beneficialDays: [],
+            beneficialDaysThreshold: 4,
+            slotSystem: {
+                enabled: false,
+                slot1Seniorities: [6, 5, 4],
+                slot2Seniorities: [3, 2, 1]
+            }
         };
     });
 
