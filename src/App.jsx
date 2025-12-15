@@ -15,7 +15,7 @@ function App() {
 
     const [constraints, setConstraints] = useState(() => {
         const saved = localStorage.getItem('constraints');
-        return saved ? JSON.parse(saved) : {
+        const defaultConstraints = {
             dailyNeeds: {
                 Monday: 2,
                 Tuesday: 2,
@@ -39,6 +39,25 @@ function App() {
                 slot2Seniorities: [3, 2, 1]
             }
         };
+
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                // Merge saved data with defaults to ensure new fields (like selectedMonth) are present
+                return {
+                    ...defaultConstraints,
+                    ...parsed,
+                    // Ensure nested objects are also merged correctly
+                    dailyNeeds: { ...defaultConstraints.dailyNeeds, ...(parsed.dailyNeeds || {}) },
+                    slotSystem: { ...defaultConstraints.slotSystem, ...(parsed.slotSystem || {}) }
+                };
+            } catch (e) {
+                console.error("Ayarlar yüklenirken hata oluştu:", e);
+                return defaultConstraints;
+            }
+        }
+
+        return defaultConstraints;
     });
 
     // Save to localStorage whenever state changes
