@@ -93,12 +93,21 @@ const StaffManager = ({ staffList, setStaffList }) => {
         }
     };
 
+    // 10-step Red-Violet Gradient (Infrared Style)
     const getSeniorityColor = (seniority) => {
         const colors = {
-            1: '#ef4444', 2: '#f97316', 3: '#f59e0b', 4: '#eab308', 5: '#84cc16',
-            6: '#22c55e', 7: '#10b981', 8: '#06b6d4', 9: '#3b82f6', 10: '#8b5cf6'
+            1: { bg: 'rgba(239, 68, 68, 0.2)', border: '#ef4444', text: '#fca5a5' }, // Red
+            2: { bg: 'rgba(249, 115, 22, 0.2)', border: '#f97316', text: '#fdba74' }, // Orange
+            3: { bg: 'rgba(245, 158, 11, 0.2)', border: '#f59e0b', text: '#fcd34d' }, // Amber
+            4: { bg: 'rgba(234, 179, 8, 0.2)', border: '#eab308', text: '#fde047' }, // Yellow
+            5: { bg: 'rgba(132, 204, 22, 0.2)', border: '#84cc16', text: '#bef264' }, // Lime
+            6: { bg: 'rgba(34, 197, 94, 0.2)', border: '#22c55e', text: '#86efac' }, // Green
+            7: { bg: 'rgba(6, 182, 212, 0.2)', border: '#06b6d4', text: '#67e8f9' }, // Cyan
+            8: { bg: 'rgba(59, 130, 246, 0.2)', border: '#3b82f6', text: '#93c5fd' }, // Blue
+            9: { bg: 'rgba(99, 102, 241, 0.2)', border: '#6366f1', text: '#a5b4fc' }, // Indigo
+            10: { bg: 'rgba(139, 92, 246, 0.2)', border: '#8b5cf6', text: '#c4b5fd' } // Violet
         };
-        return colors[seniority] || '#a78bfa';
+        return colors[seniority] || colors[10];
     };
 
     return (
@@ -166,8 +175,9 @@ const StaffManager = ({ staffList, setStaffList }) => {
                                                 borderRadius: '8px',
                                                 fontWeight: '700',
                                                 fontSize: '0.9rem',
-                                                backgroundColor: `${getSeniorityColor(staff.seniority)}20`,
-                                                color: getSeniorityColor(staff.seniority)
+                                                backgroundColor: `${getSeniorityColor(staff.seniority)}bg`,
+                                                color: getSeniorityColor(staff.seniority).text,
+                                                border: `1px solid ${getSeniorityColor(staff.seniority).border}`
                                             }}>
                                                 {staff.seniority}
                                             </span>
@@ -231,7 +241,7 @@ const StaffManager = ({ staffList, setStaffList }) => {
                             <div style={{ marginBottom: '20px' }}>
                                 <label style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span>Kıdem Sırası</span>
-                                    <strong style={{ color: getSeniorityColor(formData.seniority) }}>{formData.seniority}</strong>
+                                    <strong style={{ color: getSeniorityColor(formData.seniority).text }}>{formData.seniority}</strong>
                                 </label>
                                 <input
                                     type="range"

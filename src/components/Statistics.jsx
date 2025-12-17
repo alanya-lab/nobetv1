@@ -48,30 +48,21 @@ const Statistics = ({ staffList, schedule, constraints }) => {
 
     stats.sort((a, b) => a.seniority - b.seniority);
 
+    // 10-step Red-Violet Gradient (Infrared Style)
     const getSeniorityColor = (seniority) => {
         const colors = {
-            1: '#ef4444', // Red
-            2: '#f97316', // Orange
-            3: '#f59e0b', // Amber
-            4: '#eab308', // Yellow
-            5: '#84cc16', // Lime
-            6: '#22c55e', // Green
-            7: '#10b981', // Emerald
-            8: '#06b6d4', // Cyan
-            9: '#3b82f6', // Blue
-            10: '#8b5cf6' // Violet
+            1: { bg: 'rgba(239, 68, 68, 0.2)', border: '#ef4444', text: '#fca5a5' }, // Red
+            2: { bg: 'rgba(249, 115, 22, 0.2)', border: '#f97316', text: '#fdba74' }, // Orange
+            3: { bg: 'rgba(245, 158, 11, 0.2)', border: '#f59e0b', text: '#fcd34d' }, // Amber
+            4: { bg: 'rgba(234, 179, 8, 0.2)', border: '#eab308', text: '#fde047' }, // Yellow
+            5: { bg: 'rgba(132, 204, 22, 0.2)', border: '#84cc16', text: '#bef264' }, // Lime
+            6: { bg: 'rgba(34, 197, 94, 0.2)', border: '#22c55e', text: '#86efac' }, // Green
+            7: { bg: 'rgba(6, 182, 212, 0.2)', border: '#06b6d4', text: '#67e8f9' }, // Cyan
+            8: { bg: 'rgba(59, 130, 246, 0.2)', border: '#3b82f6', text: '#93c5fd' }, // Blue
+            9: { bg: 'rgba(99, 102, 241, 0.2)', border: '#6366f1', text: '#a5b4fc' }, // Indigo
+            10: { bg: 'rgba(139, 92, 246, 0.2)', border: '#8b5cf6', text: '#c4b5fd' } // Violet
         };
-        const color = colors[seniority] || '#6b7280';
-        return { bg: `${color}26`, text: color };
-    };
-
-    const getLogStyle = (type) => {
-        switch (type) {
-            case 'success': return { bg: 'rgba(34, 197, 94, 0.1)', border: '#4ade80' };
-            case 'warning': return { bg: 'rgba(245, 158, 11, 0.1)', border: '#fbbf24' };
-            case 'error': return { bg: 'rgba(239, 68, 68, 0.1)', border: '#f87171' };
-            default: return { bg: 'rgba(99, 102, 241, 0.1)', border: '#818cf8' };
-        }
+        return colors[seniority] || colors[10];
     };
 
     const totalShifts = stats.reduce((a, b) => a + b.shiftCount, 0);
@@ -79,209 +70,176 @@ const Statistics = ({ staffList, schedule, constraints }) => {
     const totalWeekend = stats.reduce((a, b) => a + b.weekendShifts, 0);
 
     return (
-        <>
-            {/* Summary Report Card */}
-            {logs.length > 0 && (
-                <div className="card" style={{ marginBottom: '16px' }}>
-                    <div
-                        style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            marginBottom: showLogs ? '16px' : '0',
-                            cursor: 'pointer'
-                        }}
-                        onClick={() => setShowLogs(!showLogs)}
-                    >
-                        <h3 style={{ margin: 0 }}>📋 Özet Rapor</h3>
-                        <button style={{
-                            background: 'none',
-                            border: 'none',
-                            color: 'var(--color-text-muted)',
-                            cursor: 'pointer',
-                            fontSize: '1.2rem',
-                            padding: '4px 8px'
-                        }}>
-                            {showLogs ? '▼' : '▶'}
-                        </button>
-                    </div>
+        <div className="card" style={{ marginTop: '20px' }}>
+            <h3 style={{ marginBottom: '20px', borderBottom: '1px solid var(--color-border)', paddingBottom: '10px' }}>
+                📊 İstatistikler ve Rapor
+            </h3>
 
-                    {showLogs && (
-                        <div style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '8px',
-                            maxHeight: '300px',
-                            overflowY: 'auto'
-                        }}>
-                            {logs.map((log, idx) => {
-                                const style = getLogStyle(log.type);
-                                return (
-                                    <div
-                                        key={idx}
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '10px',
-                                            padding: '10px 12px',
-                                            backgroundColor: style.bg,
-                                            borderLeft: `3px solid ${style.border}`,
-                                            borderRadius: '4px',
-                                            fontSize: '0.85rem'
-                                        }}
-                                    >
-                                        <span>{log.icon}</span>
-                                        <span>{log.message}</span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* Statistics Card */}
-            <div className="card">
-                <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '16px',
-                    flexWrap: 'wrap',
-                    gap: '12px'
-                }}>
-                    <h3 style={{ margin: 0 }}>📊 İstatistikler</h3>
-                    <div style={{
-                        display: 'flex',
-                        gap: '16px',
-                        fontSize: '0.85rem',
-                        color: 'var(--color-text-muted)'
-                    }}>
-                        <span><strong style={{ color: 'var(--color-text)' }}>{totalShifts}</strong> toplam</span>
-                        <span><strong style={{ color: '#4ade80' }}>{totalWeekday}</strong> hafta içi</span>
-                        <span><strong style={{ color: '#a78bfa' }}>{totalWeekend}</strong> hafta sonu</span>
-                    </div>
-                </div>
-
-                {/* Seniority Legend */}
-                <div style={{
-                    display: 'flex',
-                    gap: '8px',
-                    marginBottom: '16px',
-                    flexWrap: 'wrap',
-                    fontSize: '0.75rem'
-                }}>
-                    {[
-                        { label: '1 (En Çok)', color: '#ef4444' },
-                        { label: '5 (Orta)', color: '#84cc16' },
-                        { label: '10 (En Az)', color: '#8b5cf6' }
-                    ].map(item => (
-                        <div key={item.label} style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            padding: '4px 8px',
+            {/* Seniority Legend */}
+            <div style={{
+                display: 'flex',
+                gap: '4px',
+                marginBottom: '20px',
+                flexWrap: 'wrap',
+                background: 'rgba(0,0,0,0.2)',
+                padding: '10px',
+                borderRadius: '8px'
+            }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginRight: '8px', alignSelf: 'center' }}>Kıdem Skalası:</span>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(s => {
+                    const c = getSeniorityColor(s);
+                    return (
+                        <div key={s} style={{
+                            backgroundColor: c.bg,
+                            border: `1px solid ${c.border}`,
+                            color: c.text,
+                            padding: '2px 8px',
                             borderRadius: '4px',
-                            backgroundColor: 'var(--color-bg)'
+                            fontSize: '0.75rem',
+                            fontWeight: 'bold'
                         }}>
-                            <div style={{
-                                width: '8px',
-                                height: '8px',
-                                borderRadius: '50%',
-                                backgroundColor: item.color
-                            }} />
-                            <span style={{ color: 'var(--color-text-muted)' }}>{item.label}</span>
+                            {s}
                         </div>
-                    ))}
+                    );
+                })}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+                {/* Staff Stats */}
+                <div>
+                    <h4 style={{ color: 'var(--color-text-muted)', marginBottom: '12px' }}>Personel Durumu</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {staffList.map(staff => {
+                            const stat = stats.find(s => s.id === staff.id);
+                            if (!stat) return null;
+                            const colors = getSeniorityColor(staff.seniority);
+
+                            // Calculate percentage of target reached
+                            const percent = Math.min(100, Math.round((stat.shiftCount / stat.targetShifts) * 100));
+                            const isTargetMet = stat.shiftCount === stat.targetShifts;
+                            const isOver = stat.shiftCount > stat.targetShifts;
+
+                            return (
+                                <div key={staff.id} style={{
+                                    padding: '10px',
+                                    borderRadius: '8px',
+                                    backgroundColor: 'var(--color-bg)',
+                                    border: `1px solid ${colors.border}`,
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center'
+                                }}>
+                                    <div>
+                                        <div style={{ fontWeight: '600', color: colors.text }}>
+                                            {staff.name} <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>(K:{staff.seniority})</span>
+                                        </div>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                                            Haftasonu: {stat.weekendShifts} | Haftaiçi: {stat.weekdayShifts}
+                                        </div>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <div style={{
+                                            fontSize: '1.1rem',
+                                            fontWeight: '700',
+                                            color: isOver ? '#f87171' : (isTargetMet ? '#4ade80' : 'var(--color-text)')
+                                        }}>
+                                            {stat.shiftCount} <span style={{ fontSize: '0.8rem', fontWeight: '400', color: 'var(--color-text-muted)' }}>/ {stat.targetShifts}</span>
+                                        </div>
+                                        <div style={{
+                                            width: '60px',
+                                            height: '4px',
+                                            background: '#333',
+                                            borderRadius: '2px',
+                                            marginTop: '4px',
+                                            overflow: 'hidden'
+                                        }}>
+                                            <div style={{
+                                                width: `${percent}%`,
+                                                height: '100%',
+                                                background: isOver ? '#f87171' : colors.border
+                                            }} />
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
 
-                <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', minWidth: '700px' }}>
-                        <thead>
-                            <tr>
-                                <th style={{ padding: '12px', textAlign: 'left' }}>Personel</th>
-                                <th style={{ padding: '12px', textAlign: 'center', width: '70px' }}>Kıdem</th>
-                                <th style={{ padding: '12px', textAlign: 'center', width: '60px' }}>İzin</th>
-                                <th style={{ padding: '12px', textAlign: 'center', width: '70px' }}>Hedef</th>
-                                <th style={{ padding: '12px', textAlign: 'center', width: '70px' }}>Toplam</th>
-                                <th style={{ padding: '12px', textAlign: 'center', width: '80px' }}>Hafta İçi</th>
-                                <th style={{ padding: '12px', textAlign: 'center', width: '80px' }}>H. Sonu</th>
-                                <th style={{ padding: '12px', textAlign: 'center', width: '70px' }}>Saat</th>
-                                <th style={{ padding: '12px', textAlign: 'center', width: '80px' }}>Durum</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {stats.map(staff => {
-                                const colors = getSeniorityColor(staff.seniority);
-                                return (
-                                    <tr key={staff.id}>
-                                        <td style={{ padding: '12px', fontWeight: '500' }}>
-                                            {staff.name || `${staff.firstName} ${staff.lastName}`}
-                                        </td>
-                                        <td style={{ padding: '12px', textAlign: 'center' }}>
-                                            <span style={{
-                                                display: 'inline-block',
-                                                padding: '4px 10px',
-                                                borderRadius: '12px',
-                                                fontSize: '0.8rem',
-                                                fontWeight: '600',
-                                                backgroundColor: colors.bg,
-                                                color: colors.text
+                {/* Algorithm Report */}
+                <div>
+                    <h4 style={{ color: 'var(--color-text-muted)', marginBottom: '12px' }}>Algoritma Raporu</h4>
+                    <div style={{
+                        maxHeight: '500px',
+                        overflowY: 'auto',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px',
+                        paddingRight: '4px'
+                    }}>
+                        {logs.map((log, idx) => {
+                            let bg = 'var(--color-bg)';
+                            let border = 'var(--color-border)';
+                            let iconColor = 'var(--color-text)';
+
+                            if (log.type === 'error') {
+                                bg = 'rgba(239, 68, 68, 0.1)';
+                                border = 'rgba(239, 68, 68, 0.3)';
+                                iconColor = '#f87171';
+                            } else if (log.type === 'warning') {
+                                bg = 'rgba(245, 158, 11, 0.1)';
+                                border = 'rgba(245, 158, 11, 0.3)';
+                                iconColor = '#fbbf24';
+                            } else if (log.type === 'success') {
+                                bg = 'rgba(34, 197, 94, 0.1)';
+                                border = 'rgba(34, 197, 94, 0.3)';
+                                iconColor = '#4ade80';
+                            } else if (log.type === 'info') {
+                                bg = 'rgba(59, 130, 246, 0.1)';
+                                border = 'rgba(59, 130, 246, 0.3)';
+                                iconColor = '#60a5fa';
+                            }
+
+                            return (
+                                <div key={idx} style={{
+                                    padding: '10px',
+                                    borderRadius: '6px',
+                                    backgroundColor: bg,
+                                    border: `1px solid ${border}`,
+                                    fontSize: '0.85rem',
+                                    display: 'flex',
+                                    gap: '10px',
+                                    alignItems: 'flex-start'
+                                }}>
+                                    <span style={{ fontSize: '1.1rem', lineHeight: 1, color: iconColor }}>{log.icon}</span>
+                                    <div>
+                                        <div style={{ color: 'var(--color-text)', lineHeight: '1.4' }}>
+                                            {log.message}
+                                        </div>
+                                        {log.details && (
+                                            <div style={{
+                                                marginTop: '4px',
+                                                fontSize: '0.75rem',
+                                                color: 'var(--color-text-muted)',
+                                                fontStyle: 'italic'
                                             }}>
-                                                {staff.seniority}
-                                            </span>
-                                        </td>
-                                        <td style={{
-                                            padding: '12px',
-                                            textAlign: 'center',
-                                            color: staff.leaveDays > 0
-                                                ? (staff.targetReduced ? '#fbbf24' : 'var(--color-text-muted)')
-                                                : 'var(--color-text-muted)'
-                                        }}>
-                                            {staff.leaveDays > 0 ? (
-                                                <span title={staff.targetReduced ? 'Hedef düşürüldü' : 'Hedef etkilenmedi'}>
-                                                    {staff.leaveDays}g {staff.targetReduced && '↓'}
-                                                </span>
-                                            ) : '-'}
-                                        </td>
-                                        <td style={{ padding: '12px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-                                            {staff.targetShifts}
-                                        </td>
-                                        <td style={{ padding: '12px', textAlign: 'center', fontWeight: '700', fontSize: '1.1rem' }}>
-                                            {staff.shiftCount}
-                                        </td>
-                                        <td style={{ padding: '12px', textAlign: 'center' }}>
-                                            {staff.weekdayShifts}
-                                        </td>
-                                        <td style={{
-                                            padding: '12px',
-                                            textAlign: 'center',
-                                            color: staff.weekendShifts > 0 ? '#a78bfa' : 'inherit'
-                                        }}>
-                                            {staff.weekendShifts}
-                                        </td>
-                                        <td style={{ padding: '12px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-                                            {staff.totalHours}h
-                                        </td>
-                                        <td style={{ padding: '12px', textAlign: 'center' }}>
-                                            {staff.targetDiff === 0 ? (
-                                                <span style={{ color: '#4ade80' }}>✓</span>
-                                            ) : staff.targetDiff > 0 ? (
-                                                <span style={{ color: '#fbbf24' }}>+{staff.targetDiff}</span>
-                                            ) : (
-                                                <span style={{ color: 'var(--color-text-muted)' }}>{staff.targetDiff}</span>
-                                            )}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
+                                                {log.details}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                        {logs.length === 0 && (
+                            <div style={{ color: 'var(--color-text-muted)', fontStyle: 'italic', padding: '10px' }}>
+                                Henüz rapor oluşturulmadı.
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
-        </>
+        </div>
     );
 };
 
 export default Statistics;
-

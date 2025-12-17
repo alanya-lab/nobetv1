@@ -54,16 +54,27 @@ const Scheduler = ({ staffList, constraints, schedule, setSchedule }) => {
         const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
         let text = `Vardiya Çizelgesi - ${monthTitle}\n\n`;
-        text += 'Tarih\tGün\tNöbetçiler\n';
-        text += '─'.repeat(50) + '\n';
+        text += 'Tarih\tNöbetçi 1\tNöbetçi 2\n';
+        text += '─'.repeat(60) + '\n';
 
         days.forEach(day => {
             const dateString = format(day, 'yyyy-MM-dd');
             const assigned = schedule[dateString] || [];
-            const dayName = format(day, 'EEEE', { locale: tr });
-            const dateFormatted = format(day, 'd MMMM', { locale: tr });
-            const names = assigned.map(s => s.name || `${s.firstName} ${s.lastName}`).join(', ');
-            text += `${dateFormatted}\t${dayName}\t${names || '-'}\n`;
+
+            // Format: "8 Ocak Perşembe"
+            const fullDate = format(day, 'd MMMM EEEE', { locale: tr });
+
+            // Get staff names
+            const staff1 = assigned[0] ? (assigned[0].name || `${assigned[0].firstName} ${assigned[0].lastName}`) : '-';
+            const staff2 = assigned[1] ? (assigned[1].name || `${assigned[1].firstName} ${assigned[1].lastName}`) : '-';
+
+            // If there are more, add them too (just in case)
+            let extraStaff = '';
+            if (assigned.length > 2) {
+                extraStaff = '\t' + assigned.slice(2).map(s => s.name || `${s.firstName} ${s.lastName}`).join('\t');
+            }
+
+            text += `${fullDate}\t${staff1}\t${staff2}${extraStaff}\n`;
         });
 
         navigator.clipboard.writeText(text).then(() => {
@@ -72,13 +83,21 @@ const Scheduler = ({ staffList, constraints, schedule, setSchedule }) => {
         });
     };
 
-    // Get seniority-based color
+    // 10-step Red-Violet Gradient (Infrared Style)
     const getSeniorityColor = (seniority) => {
-        if (seniority <= 2) return { bg: 'rgba(239, 68, 68, 0.2)', border: '#f87171', text: '#fca5a5' };
-        if (seniority <= 4) return { bg: 'rgba(245, 158, 11, 0.2)', border: '#fbbf24', text: '#fcd34d' };
-        if (seniority <= 6) return { bg: 'rgba(34, 197, 94, 0.2)', border: '#4ade80', text: '#86efac' };
-        if (seniority <= 8) return { bg: 'rgba(59, 130, 246, 0.2)', border: '#60a5fa', text: '#93c5fd' };
-        return { bg: 'rgba(139, 92, 246, 0.2)', border: '#a78bfa', text: '#c4b5fd' };
+        const colors = {
+            1: { bg: 'rgba(239, 68, 68, 0.2)', border: '#ef4444', text: '#fca5a5' }, // Red
+            2: { bg: 'rgba(249, 115, 22, 0.2)', border: '#f97316', text: '#fdba74' }, // Orange
+            3: { bg: 'rgba(245, 158, 11, 0.2)', border: '#f59e0b', text: '#fcd34d' }, // Amber
+            4: { bg: 'rgba(234, 179, 8, 0.2)', border: '#eab308', text: '#fde047' }, // Yellow
+            5: { bg: 'rgba(132, 204, 22, 0.2)', border: '#84cc16', text: '#bef264' }, // Lime
+            6: { bg: 'rgba(34, 197, 94, 0.2)', border: '#22c55e', text: '#86efac' }, // Green
+            7: { bg: 'rgba(6, 182, 212, 0.2)', border: '#06b6d4', text: '#67e8f9' }, // Cyan
+            8: { bg: 'rgba(59, 130, 246, 0.2)', border: '#3b82f6', text: '#93c5fd' }, // Blue
+            9: { bg: 'rgba(99, 102, 241, 0.2)', border: '#6366f1', text: '#a5b4fc' }, // Indigo
+            10: { bg: 'rgba(139, 92, 246, 0.2)', border: '#8b5cf6', text: '#c4b5fd' } // Violet
+        };
+        return colors[seniority] || colors[10];
     };
 
     // --- Drag and Drop Handlers ---
