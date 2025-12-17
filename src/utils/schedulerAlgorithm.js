@@ -151,10 +151,69 @@ export const generateSchedule = (staffList, constraints, selectedDate = new Date
         const dayOfMonth = i + 1;
 
         // Determine needs for this day
-        const neededCount = constraints.dailyNeeds[dayName] || 2;
+        let neededCount = constraints.dailyNeeds[dayName] || 2;
+        const assignedForDay = [];
 
-        // Filter available staff
+        // --- PHASE 0: PRE-ASSIGN REQUIRED STAFF ---
+        // Priority: If staff has this day as "Required", assign them FIRST (if rested)
+        staffList.forEach(staff => {
+            if (staff.requiredDays && staff.requiredDays.includes(dateString)) {
+                const stats = staffStats[staff.id];
+
+                // Check Rest Constraint (Safety)
+                let isRested = true;
+                if (stats.lastShiftDate) {
+                    const daysSinceLastShift = differenceInDays(currentDate, stats.lastShiftDate);
+                    if (daysSinceLastShift < requiredDayGap) {
+                        isRested = false;
+                    }
+                }
+
+                if (isRested) {
+                    // Assign immediately
+                    assignedForDay.push(staff);
+
+                    // Update stats immediately so they affect subsequent logic
+                    stats.shiftCount++;
+                    stats.lastShiftDate = currentDate;
+                    stats.daysAssigned[dayName]++;
+                    if (isWknd) stats.weekendShifts++;
+                    else stats.weekdayShifts++;
+
+                    // Reduce needed count for the general pool
+                    neededCount--;
+
+                    logs.push({
+                        type: 'success',
+                        icon: '🔒',
+                        message: `${dayOfMonth}. gün: ${staff.name} kesin istek üzerine atandı.`
+                    });
+                } else {
+                    logs.push({
+                        type: 'error',
+                        icon: '🚫',
+                        message: `${dayOfMonth}. gün: ${staff.name} için kesin istek vardı ama dinlenme süresi yetersiz!`
+                    });
+                }
+            }
+        });
+
+        // If we already filled the day with required staff, skip the rest
+        if (neededCount <= 0 && assignedForDay.length >= (constraints.dailyNeeds[dayName] || 2)) {
+            schedule[dateString] = assignedForDay;
+            continue;
+        }
+
+        // If neededCount became negative (e.g. 3 required for a 2-person day), 
+        // we just accept it (overstaffing for required days is better than ignoring)
+        if (neededCount < 0) neededCount = 0;
+
+
+        // Filter available staff (Exclude those already assigned)
         let candidates = staffList.filter(staff => {
+            // Skip if already assigned in Phase 0
+            if (assignedForDay.find(s => s.id === staff.id)) return false;
+
             const stats = staffStats[staff.id];
 
             // 1. Unavailability - check BOTH unavailable (preference) AND leave days
@@ -289,7 +348,7 @@ export const generateSchedule = (staffList, constraints, selectedDate = new Date
             return score;
         };
 
-        const assignedForDay = [];
+        // assignedForDay is already initialized and potentially populated in Phase 0
 
         // SLOT SYSTEM LOGIC
         if (constraints.slotSystem && constraints.slotSystem.enabled) {

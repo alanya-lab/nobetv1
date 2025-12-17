@@ -6,6 +6,7 @@ import { tr } from 'date-fns/locale';
 const Scheduler = ({ staffList, constraints, schedule, setSchedule }) => {
     const [editingDay, setEditingDay] = useState(null);
     const [copied, setCopied] = useState(false);
+    const [draggedItem, setDraggedItem] = useState(null);
 
     // Use selected month or default to current
     const selectedDate = constraints.selectedMonth ? new Date(constraints.selectedMonth + '-01') : new Date();
@@ -78,6 +79,49 @@ const Scheduler = ({ staffList, constraints, schedule, setSchedule }) => {
         if (seniority <= 6) return { bg: 'rgba(34, 197, 94, 0.2)', border: '#4ade80', text: '#86efac' };
         if (seniority <= 8) return { bg: 'rgba(59, 130, 246, 0.2)', border: '#60a5fa', text: '#93c5fd' };
         return { bg: 'rgba(139, 92, 246, 0.2)', border: '#a78bfa', text: '#c4b5fd' };
+    };
+
+    // --- Drag and Drop Handlers ---
+    const handleDragStart = (e, dateString, staff) => {
+        setDraggedItem({ date: dateString, staff });
+        e.dataTransfer.effectAllowed = 'move';
+        e.target.style.opacity = '0.5';
+    };
+
+    const handleDragEnd = (e) => {
+        e.target.style.opacity = '1';
+        setDraggedItem(null);
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    };
+
+    const handleDrop = (e, targetDate, targetStaff) => {
+        e.preventDefault();
+
+        if (!draggedItem) return;
+
+        const { date: sourceDate, staff: sourceStaff } = draggedItem;
+
+        // Don't do anything if dropped on same person
+        if (sourceDate === targetDate && sourceStaff.id === targetStaff.id) return;
+
+        // Perform the swap
+        setSchedule(prev => {
+            const newSchedule = { ...prev };
+
+            // Remove from old positions
+            newSchedule[sourceDate] = newSchedule[sourceDate].filter(s => s.id !== sourceStaff.id);
+            newSchedule[targetDate] = newSchedule[targetDate].filter(s => s.id !== targetStaff.id);
+
+            // Add to new positions (Swap)
+            newSchedule[sourceDate].push(targetStaff);
+            newSchedule[targetDate].push(sourceStaff);
+
+            return newSchedule;
+        });
     };
 
     const renderCalendar = () => {
@@ -184,23 +228,34 @@ const Scheduler = ({ staffList, constraints, schedule, setSchedule }) => {
                                 {assigned.map(staff => {
                                     const colors = getSeniorityColor(staff.seniority);
                                     return (
-                                        <div key={staff.id} style={{
-                                            fontSize: '0.75rem',
-                                            padding: '3px 6px',
-                                            borderRadius: '4px',
-                                            backgroundColor: colors.bg,
-                                            color: colors.text,
-                                            border: `1px solid ${colors.border}`,
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center',
-                                            gap: '4px'
-                                        }}>
+                                        <div
+                                            key={staff.id}
+                                            draggable={!isEditing}
+                                            onDragStart={(e) => handleDragStart(e, dateString, staff)}
+                                            onDragEnd={handleDragEnd}
+                                            onDragOver={handleDragOver}
+                                            onDrop={(e) => handleDrop(e, dateString, staff)}
+                                            style={{
+                                                fontSize: '0.75rem',
+                                                padding: '3px 6px',
+                                                borderRadius: '4px',
+                                                backgroundColor: colors.bg,
+                                                color: colors.text,
+                                                border: `1px solid ${colors.border}`,
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                gap: '4px',
+                                                cursor: isEditing ? 'default' : 'grab',
+                                                transition: 'all 0.2s'
+                                            }}
+                                        >
                                             <span style={{
                                                 whiteSpace: 'nowrap',
                                                 overflow: 'hidden',
                                                 textOverflow: 'ellipsis',
-                                                flex: 1
+                                                flex: 1,
+                                                pointerEvents: 'none'
                                             }}>
                                                 {staff.name || `${staff.firstName} ${staff.lastName?.charAt(0)}.`}
                                             </span>
@@ -263,6 +318,47 @@ const Scheduler = ({ staffList, constraints, schedule, setSchedule }) => {
         );
     };
 
+    // Download settings log
+    const downloadSettingsLog = () => {
+        let log = `NOBET CIZELGESI AYARLARI - ${format(new Date(), 'dd.MM.yyyy HH:mm')}\n`;
+        log += `============================================\n\n`;
+
+        log += `1. GENEL KISITLAMALAR\n`;
+        log += `---------------------\n`;
+        log += `Ay: ${monthTitle}\n`;
+        log += `Maksimum Nöbet: ${constraints.maxShiftsPerMonth}\n`;
+        log += `Min Dinlenme: ${constraints.minRestHours} saat\n`;
+        log += `Vardiya Süresi: ${constraints.shiftDuration} saat\n`;
+        log += `Slot Sistemi: ${constraints.slotSystem?.enabled ? 'Aktif' : 'Pasif'}\n\n`;
+
+        log += `2. GUNLUK IHTIYACLAR\n`;
+        log += `--------------------\n`;
+        Object.entries(constraints.dailyNeeds).forEach(([day, count]) => {
+            log += `${day}: ${count} kişi\n`;
+        });
+        log += `\n`;
+
+        log += `3. PERSONEL LISTESI (${staffList.length} Kişi)\n`;
+        log += `----------------------------------------\n`;
+        staffList.forEach(staff => {
+            log += `[ID: ${staff.id}] ${staff.name}\n`;
+            log += `   - Kıdem: ${staff.seniority}\n`;
+            log += `   - Müsait Değil: ${staff.unavailability?.join(', ') || 'Yok'}\n`;
+            log += `   - İzinli: ${staff.leaveDays?.join(', ') || 'Yok'}\n`;
+            log += `   - Kesin Nöbet: ${staff.requiredDays?.join(', ') || 'Yok'}\n`;
+            log += `\n`;
+        });
+
+        const blob = new Blob([log], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `nobet_ayarlari_${format(new Date(), 'yyyyMMdd_HHmm')}.txt`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
         <div className="card">
             <div style={{
@@ -286,6 +382,13 @@ const Scheduler = ({ staffList, constraints, schedule, setSchedule }) => {
                     </div>
                 </div>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <button
+                        onClick={downloadSettingsLog}
+                        className="btn btn-ghost"
+                        title="Tüm ayarları ve personel listesini indir"
+                    >
+                        ⚙️ Ayarları İndir
+                    </button>
                     {schedule && (
                         <button
                             onClick={copyToClipboard}
@@ -314,7 +417,7 @@ const Scheduler = ({ staffList, constraints, schedule, setSchedule }) => {
                     gap: '8px'
                 }}>
                     <span>💡</span>
-                    <span>Her günün yanındaki ✏️ simgesine tıklayarak çizelgeyi düzenleyebilirsiniz.</span>
+                    <span>İsimleri sürükleyip bırakarak yer değiştirebilirsiniz.</span>
                 </div>
             )}
 
