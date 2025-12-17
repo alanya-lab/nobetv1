@@ -94,11 +94,11 @@ const StaffManager = ({ staffList, setStaffList }) => {
     };
 
     const getSeniorityColor = (seniority) => {
-        if (seniority <= 2) return '#f87171';
-        if (seniority <= 4) return '#fbbf24';
-        if (seniority <= 6) return '#4ade80';
-        if (seniority <= 8) return '#60a5fa';
-        return '#a78bfa';
+        const colors = {
+            1: '#ef4444', 2: '#f97316', 3: '#f59e0b', 4: '#eab308', 5: '#84cc16',
+            6: '#22c55e', 7: '#10b981', 8: '#06b6d4', 9: '#3b82f6', 10: '#8b5cf6'
+        };
+        return colors[seniority] || '#a78bfa';
     };
 
     return (

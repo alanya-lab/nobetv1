@@ -74,11 +74,7 @@ const calculateSeniorityTargets = (staffList, totalShiftsNeeded, daysInMonth) =>
  * Get seniority group label for display
  */
 const getSeniorityGroup = (seniority) => {
-    if (seniority <= 2) return 'En Çok Nöbet (Kıdem 1-2)';
-    if (seniority <= 4) return 'Yüksek (Kıdem 3-4)';
-    if (seniority <= 6) return 'Orta (Kıdem 5-6)';
-    if (seniority <= 8) return 'Düşük (Kıdem 7-8)';
-    return 'En Az (Kıdem 9-10)';
+    return `Kıdem ${seniority}`;
 };
 
 export const generateSchedule = (staffList, constraints, selectedDate = new Date()) => {
@@ -119,7 +115,7 @@ export const generateSchedule = (staffList, constraints, selectedDate = new Date
     const staffStats = {};
     staffList.forEach(staff => {
         staffStats[staff.id] = {
-             id: staff.id,   // <--- BU SATIRI EKLEYİN
+            id: staff.id,
             shiftCount: 0,
             lastShiftDate: null,
             weekendShifts: 0,
@@ -339,15 +335,50 @@ export const generateSchedule = (staffList, constraints, selectedDate = new Date
         }
         // NORMAL LOGIC (No Slot System)
         else {
-            const scoredCandidates = candidates.map(staff => ({
+            // 1. Calculate base scores for all candidates once
+            let candidatesWithScores = candidates.map(staff => ({
                 staff,
-                score: calculateScore(staff)
+                baseScore: calculateScore(staff)
             }));
 
-            scoredCandidates.sort((a, b) => b.score - a.score);
+            // 2. Iteratively pick staff to enforce Pairing (Senior-Junior balance)
+            while (assignedForDay.length < neededCount && candidatesWithScores.length > 0) {
+                // Recalculate dynamic scores based on who is already assigned
+                candidatesWithScores.forEach(cs => {
+                    cs.finalScore = cs.baseScore;
 
-            for (let j = 0; j < scoredCandidates.length && assignedForDay.length < neededCount; j++) {
-                assignedForDay.push(scoredCandidates[j].staff);
+                    // PAIRING LOGIC: If someone is already assigned, try to match with opposite seniority
+                    if (assignedForDay.length > 0) {
+                        const lastAssigned = assignedForDay[assignedForDay.length - 1];
+
+                        // RAW SENIORITY DIFFERENCE
+                        // We want to maximize the difference between seniorities.
+                        // Example: 10 vs 1 -> Diff 9 -> +9000 points
+                        // Example: 6 vs 5 -> Diff 1 -> +1000 points
+                        // Example: 6 vs 6 -> Diff 0 -> -500 points (Penalty)
+
+                        const diff = Math.abs(cs.staff.seniority - lastAssigned.seniority);
+
+                        if (diff === 0) {
+                            // Same seniority -> Penalty
+                            // Small penalty (-500) to allow if necessary
+                            cs.finalScore -= 500;
+                        } else {
+                            // Different seniority -> Bonus based on distance
+                            cs.finalScore += diff * 1000;
+                        }
+                    }
+                });
+
+                // Sort by final score
+                candidatesWithScores.sort((a, b) => b.finalScore - a.finalScore);
+
+                // Pick the best
+                const bestMatch = candidatesWithScores[0];
+                assignedForDay.push(bestMatch.staff);
+
+                // Remove picked staff from candidates list
+                candidatesWithScores.shift();
             }
         }
 
@@ -486,4 +517,3 @@ export const generateSchedule = (staffList, constraints, selectedDate = new Date
 
     return schedule;
 };
-

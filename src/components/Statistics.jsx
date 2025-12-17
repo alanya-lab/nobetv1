@@ -49,11 +49,20 @@ const Statistics = ({ staffList, schedule, constraints }) => {
     stats.sort((a, b) => a.seniority - b.seniority);
 
     const getSeniorityColor = (seniority) => {
-        if (seniority <= 2) return { bg: 'rgba(239, 68, 68, 0.15)', text: '#f87171' };
-        if (seniority <= 4) return { bg: 'rgba(245, 158, 11, 0.15)', text: '#fbbf24' };
-        if (seniority <= 6) return { bg: 'rgba(34, 197, 94, 0.15)', text: '#4ade80' };
-        if (seniority <= 8) return { bg: 'rgba(59, 130, 246, 0.15)', text: '#60a5fa' };
-        return { bg: 'rgba(139, 92, 246, 0.15)', text: '#a78bfa' };
+        const colors = {
+            1: '#ef4444', // Red
+            2: '#f97316', // Orange
+            3: '#f59e0b', // Amber
+            4: '#eab308', // Yellow
+            5: '#84cc16', // Lime
+            6: '#22c55e', // Green
+            7: '#10b981', // Emerald
+            8: '#06b6d4', // Cyan
+            9: '#3b82f6', // Blue
+            10: '#8b5cf6' // Violet
+        };
+        const color = colors[seniority] || '#6b7280';
+        return { bg: `${color}26`, text: color };
     };
 
     const getLogStyle = (type) => {
@@ -163,11 +172,9 @@ const Statistics = ({ staffList, schedule, constraints }) => {
                     fontSize: '0.75rem'
                 }}>
                     {[
-                        { label: 'K:1-2', color: '#f87171', desc: 'En çok' },
-                        { label: 'K:3-4', color: '#fbbf24', desc: 'Yüksek' },
-                        { label: 'K:5-6', color: '#4ade80', desc: 'Orta' },
-                        { label: 'K:7-8', color: '#60a5fa', desc: 'Düşük' },
-                        { label: 'K:9-10', color: '#a78bfa', desc: 'En az' }
+                        { label: '1 (En Çok)', color: '#ef4444' },
+                        { label: '5 (Orta)', color: '#84cc16' },
+                        { label: '10 (En Az)', color: '#8b5cf6' }
                     ].map(item => (
                         <div key={item.label} style={{
                             display: 'flex',
