@@ -119,6 +119,7 @@ export const generateSchedule = (staffList, constraints, selectedDate = new Date
     const staffStats = {};
     staffList.forEach(staff => {
         staffStats[staff.id] = {
+             id: staff.id,   // <--- BU SATIRI EKLEYİN
             shiftCount: 0,
             lastShiftDate: null,
             weekendShifts: 0,
@@ -485,3 +486,4 @@ export const generateSchedule = (staffList, constraints, selectedDate = new Date
 
     return schedule;
 };
+
