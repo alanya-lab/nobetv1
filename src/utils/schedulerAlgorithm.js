@@ -244,6 +244,17 @@ export const generateSchedule = (staffList, constraints, selectedDate = new Date
             // 3. Rest Time (Checks Past AND Future assignments)
             if (isResting(staff.id, currentDate, schedule, requiredDayGap)) return false;
 
+            // 4. Seniority Sum Constraints
+            if (constraints.maxSenioritySum > 0) {
+                const currentSum = assignedForDay.reduce((sum, s) => sum + s.seniority, 0);
+                if (currentSum + staff.seniority > constraints.maxSenioritySum) return false;
+            }
+
+            if (constraints.minSenioritySum > 0 && assignedForDay.length === neededCount - 1) {
+                const currentSum = assignedForDay.reduce((sum, s) => sum + s.seniority, 0);
+                if (currentSum + staff.seniority < constraints.minSenioritySum) return false;
+            }
+
             return true;
         });
 

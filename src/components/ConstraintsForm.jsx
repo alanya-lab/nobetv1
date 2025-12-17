@@ -134,162 +134,186 @@ const ConstraintsForm = ({ constraints, setConstraints }) => {
                     }}>
                         {constraints.minRestHours > 12 ? '(Arka arkaya nöbet yok)' : '(Arka arkaya nöbet izinli)'}
                     </p>
+                </div>
 
-                    <div style={{ gridColumn: '1 / -1', marginTop: '10px', padding: '16px', backgroundColor: 'var(--color-bg)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
-                        <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600' }}>⭐ Kıdemli Öncelikli Günler</label>
+                <div>
+                    <label>Min Kıdem Toplamı</label>
+                    <input
+                        type="number"
+                        name="minSenioritySum"
+                        value={constraints.minSenioritySum || ''}
+                        onChange={handleInputChange}
+                        min="0"
+                        placeholder="Örn: 5"
+                    />
+                </div>
 
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
-                            {days.map(day => (
-                                <label key={day.key} style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    padding: '6px 12px',
-                                    backgroundColor: constraints.beneficialDays?.includes(day.key) ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
-                                    border: `1px solid ${constraints.beneficialDays?.includes(day.key) ? '#6366f1' : 'var(--color-border)'}`,
-                                    borderRadius: '20px',
-                                    cursor: 'pointer',
-                                    fontSize: '0.85rem'
-                                }}>
-                                    <input
-                                        type="checkbox"
-                                        checked={constraints.beneficialDays?.includes(day.key) || false}
-                                        onChange={(e) => {
-                                            const current = constraints.beneficialDays || [];
-                                            const updated = e.target.checked
-                                                ? [...current, day.key]
-                                                : current.filter(d => d !== day.key);
-                                            setConstraints({ ...constraints, beneficialDays: updated });
-                                        }}
-                                        style={{ accentColor: '#6366f1' }}
-                                    />
-                                    {day.label}
-                                </label>
-                            ))}
-                        </div>
+                <div>
+                    <label>Max Kıdem Toplamı</label>
+                    <input
+                        type="number"
+                        name="maxSenioritySum"
+                        value={constraints.maxSenioritySum || ''}
+                        onChange={handleInputChange}
+                        min="0"
+                        placeholder="Örn: 15"
+                    />
+                </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <label style={{ fontSize: '0.9rem' }}>Minimum Kıdem Eşiği:</label>
-                            <select
-                                value={constraints.beneficialDaysThreshold || 4}
-                                onChange={(e) => setConstraints({ ...constraints, beneficialDaysThreshold: parseInt(e.target.value, 10) })}
-                                style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--color-border)' }}
-                            >
-                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
-                                    <option key={n} value={n}>{n}</option>
-                                ))}
-                            </select>
-                            <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
-                                (Seçilen günlerde bu kıdem ve üzeri öncelikli atanır)
-                            </span>
-                        </div>
-                    </div>
+                <div style={{ gridColumn: '1 / -1', marginTop: '10px', padding: '16px', backgroundColor: 'var(--color-bg)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+                    <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600' }}>⭐ Kıdemli Öncelikli Günler</label>
 
-                    {/* Slot System */}
-                    <div style={{ gridColumn: '1 / -1', marginTop: '10px', padding: '16px', backgroundColor: 'var(--color-bg)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                            <label style={{ fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
+                        {days.map(day => (
+                            <label key={day.key} style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                padding: '6px 12px',
+                                backgroundColor: constraints.beneficialDays?.includes(day.key) ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
+                                border: `1px solid ${constraints.beneficialDays?.includes(day.key) ? '#6366f1' : 'var(--color-border)'}`,
+                                borderRadius: '20px',
+                                cursor: 'pointer',
+                                fontSize: '0.85rem'
+                            }}>
                                 <input
                                     type="checkbox"
-                                    checked={constraints.slotSystem?.enabled || false}
-                                    onChange={(e) => setConstraints({
-                                        ...constraints,
-                                        slotSystem: { ...constraints.slotSystem, enabled: e.target.checked }
-                                    })}
-                                    style={{ width: '18px', height: '18px', accentColor: '#6366f1' }}
+                                    checked={constraints.beneficialDays?.includes(day.key) || false}
+                                    onChange={(e) => {
+                                        const current = constraints.beneficialDays || [];
+                                        const updated = e.target.checked
+                                            ? [...current, day.key]
+                                            : current.filter(d => d !== day.key);
+                                        setConstraints({ ...constraints, beneficialDays: updated });
+                                    }}
+                                    style={{ accentColor: '#6366f1' }}
                                 />
-                                ☑️ Slot Sistemini Aktif Et
+                                {day.label}
                             </label>
-                        </div>
-
-                        {constraints.slotSystem?.enabled && (
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                                {/* Slot 1 */}
-                                <div>
-                                    <h4 style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: '#6366f1' }}>📌 Slot 1 (1. Nöbetçi)</h4>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                                        {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map(seniority => (
-                                            <label key={`s1-${seniority}`} style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                width: '32px',
-                                                height: '32px',
-                                                borderRadius: '50%',
-                                                border: `1px solid ${constraints.slotSystem?.slot1Seniorities?.includes(seniority) ? '#6366f1' : 'var(--color-border)'}`,
-                                                backgroundColor: constraints.slotSystem?.slot1Seniorities?.includes(seniority) ? '#6366f1' : 'transparent',
-                                                color: constraints.slotSystem?.slot1Seniorities?.includes(seniority) ? 'white' : 'var(--color-text)',
-                                                cursor: 'pointer',
-                                                fontSize: '0.85rem',
-                                                fontWeight: '600'
-                                            }}>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={constraints.slotSystem?.slot1Seniorities?.includes(seniority) || false}
-                                                    onChange={(e) => {
-                                                        const current = constraints.slotSystem?.slot1Seniorities || [];
-                                                        const updated = e.target.checked
-                                                            ? [...current, seniority]
-                                                            : current.filter(s => s !== seniority);
-                                                        setConstraints({
-                                                            ...constraints,
-                                                            slotSystem: { ...constraints.slotSystem, slot1Seniorities: updated }
-                                                        });
-                                                    }}
-                                                    style={{ display: 'none' }}
-                                                />
-                                                {seniority}
-                                            </label>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Slot 2 */}
-                                <div>
-                                    <h4 style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: '#8b5cf6' }}>📌 Slot 2 (2. Nöbetçi)</h4>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                                        {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map(seniority => (
-                                            <label key={`s2-${seniority}`} style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                width: '32px',
-                                                height: '32px',
-                                                borderRadius: '50%',
-                                                border: `1px solid ${constraints.slotSystem?.slot2Seniorities?.includes(seniority) ? '#8b5cf6' : 'var(--color-border)'}`,
-                                                backgroundColor: constraints.slotSystem?.slot2Seniorities?.includes(seniority) ? '#8b5cf6' : 'transparent',
-                                                color: constraints.slotSystem?.slot2Seniorities?.includes(seniority) ? 'white' : 'var(--color-text)',
-                                                cursor: 'pointer',
-                                                fontSize: '0.85rem',
-                                                fontWeight: '600'
-                                            }}>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={constraints.slotSystem?.slot2Seniorities?.includes(seniority) || false}
-                                                    onChange={(e) => {
-                                                        const current = constraints.slotSystem?.slot2Seniorities || [];
-                                                        const updated = e.target.checked
-                                                            ? [...current, seniority]
-                                                            : current.filter(s => s !== seniority);
-                                                        setConstraints({
-                                                            ...constraints,
-                                                            slotSystem: { ...constraints.slotSystem, slot2Seniorities: updated }
-                                                        });
-                                                    }}
-                                                    style={{ display: 'none' }}
-                                                />
-                                                {seniority}
-                                            </label>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <p style={{ gridColumn: '1 / -1', margin: '10px 0 0 0', fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
-                                    ⚠️ Slotlar birbirinden bağımsızdır. Eğer bir slot için uygun personel bulunamazsa, o pozisyon boş kalır.
-                                </p>
-                            </div>
-                        )}
+                        ))}
                     </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <label style={{ fontSize: '0.9rem' }}>Minimum Kıdem Eşiği:</label>
+                        <select
+                            value={constraints.beneficialDaysThreshold || 4}
+                            onChange={(e) => setConstraints({ ...constraints, beneficialDaysThreshold: parseInt(e.target.value, 10) })}
+                            style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--color-border)' }}
+                        >
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
+                                <option key={n} value={n}>{n}</option>
+                            ))}
+                        </select>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                            (Seçilen günlerde bu kıdem ve üzeri öncelikli atanır)
+                        </span>
+                    </div>
+                </div>
+
+                {/* Slot System */}
+                <div style={{ gridColumn: '1 / -1', marginTop: '10px', padding: '16px', backgroundColor: 'var(--color-bg)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                        <label style={{ fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                            <input
+                                type="checkbox"
+                                checked={constraints.slotSystem?.enabled || false}
+                                onChange={(e) => setConstraints({
+                                    ...constraints,
+                                    slotSystem: { ...constraints.slotSystem, enabled: e.target.checked }
+                                })}
+                                style={{ width: '18px', height: '18px', accentColor: '#6366f1' }}
+                            />
+                            ☑️ Slot Sistemini Aktif Et
+                        </label>
+                    </div>
+
+                    {constraints.slotSystem?.enabled && (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                            {/* Slot 1 */}
+                            <div>
+                                <h4 style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: '#6366f1' }}>📌 Slot 1 (1. Nöbetçi)</h4>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                    {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map(seniority => (
+                                        <label key={`s1-${seniority}`} style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            width: '32px',
+                                            height: '32px',
+                                            borderRadius: '50%',
+                                            border: `1px solid ${constraints.slotSystem?.slot1Seniorities?.includes(seniority) ? '#6366f1' : 'var(--color-border)'}`,
+                                            backgroundColor: constraints.slotSystem?.slot1Seniorities?.includes(seniority) ? '#6366f1' : 'transparent',
+                                            color: constraints.slotSystem?.slot1Seniorities?.includes(seniority) ? 'white' : 'var(--color-text)',
+                                            cursor: 'pointer',
+                                            fontSize: '0.85rem',
+                                            fontWeight: '600'
+                                        }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={constraints.slotSystem?.slot1Seniorities?.includes(seniority) || false}
+                                                onChange={(e) => {
+                                                    const current = constraints.slotSystem?.slot1Seniorities || [];
+                                                    const updated = e.target.checked
+                                                        ? [...current, seniority]
+                                                        : current.filter(s => s !== seniority);
+                                                    setConstraints({
+                                                        ...constraints,
+                                                        slotSystem: { ...constraints.slotSystem, slot1Seniorities: updated }
+                                                    });
+                                                }}
+                                                style={{ display: 'none' }}
+                                            />
+                                            {seniority}
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Slot 2 */}
+                            <div>
+                                <h4 style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: '#8b5cf6' }}>📌 Slot 2 (2. Nöbetçi)</h4>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                    {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map(seniority => (
+                                        <label key={`s2-${seniority}`} style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            width: '32px',
+                                            height: '32px',
+                                            borderRadius: '50%',
+                                            border: `1px solid ${constraints.slotSystem?.slot2Seniorities?.includes(seniority) ? '#8b5cf6' : 'var(--color-border)'}`,
+                                            backgroundColor: constraints.slotSystem?.slot2Seniorities?.includes(seniority) ? '#8b5cf6' : 'transparent',
+                                            color: constraints.slotSystem?.slot2Seniorities?.includes(seniority) ? 'white' : 'var(--color-text)',
+                                            cursor: 'pointer',
+                                            fontSize: '0.85rem',
+                                            fontWeight: '600'
+                                        }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={constraints.slotSystem?.slot2Seniorities?.includes(seniority) || false}
+                                                onChange={(e) => {
+                                                    const current = constraints.slotSystem?.slot2Seniorities || [];
+                                                    const updated = e.target.checked
+                                                        ? [...current, seniority]
+                                                        : current.filter(s => s !== seniority);
+                                                    setConstraints({
+                                                        ...constraints,
+                                                        slotSystem: { ...constraints.slotSystem, slot2Seniorities: updated }
+                                                    });
+                                                }}
+                                                style={{ display: 'none' }}
+                                            />
+                                            {seniority}
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <p style={{ gridColumn: '1 / -1', margin: '10px 0 0 0', fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                                ⚠️ Slotlar birbirinden bağımsızdır. Eğer bir slot için uygun personel bulunamazsa, o pozisyon boş kalır.
+                            </p>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
