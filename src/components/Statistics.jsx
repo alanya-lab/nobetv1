@@ -108,7 +108,7 @@ const Statistics = ({ staffList, schedule, constraints }) => {
                 {/* Staff Stats */}
                 <div>
                     <h4 style={{ color: 'var(--color-text-muted)', marginBottom: '12px' }}>Personel Durumu</h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '8px' }}>
                         {staffList.map(staff => {
                             const stat = stats.find(s => s.id === staff.id);
                             if (!stat) return null;
@@ -121,37 +121,46 @@ const Statistics = ({ staffList, schedule, constraints }) => {
 
                             return (
                                 <div key={staff.id} style={{
-                                    padding: '10px',
-                                    borderRadius: '8px',
+                                    padding: '8px 10px',
+                                    borderRadius: '6px',
                                     backgroundColor: 'var(--color-bg)',
                                     border: `1px solid ${colors.border}`,
                                     display: 'flex',
                                     justifyContent: 'space-between',
-                                    alignItems: 'center'
+                                    alignItems: 'center',
+                                    gap: '8px'
                                 }}>
-                                    <div>
-                                        <div style={{ fontWeight: '600', color: colors.text }}>
+                                    <div style={{ minWidth: 0, flex: 1 }}>
+                                        <div style={{
+                                            fontWeight: '600',
+                                            color: colors.text,
+                                            fontSize: '0.9rem',
+                                            whiteSpace: 'nowrap',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis'
+                                        }}>
                                             {staff.name} <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>(K:{staff.seniority})</span>
                                         </div>
-                                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '2px' }}>
                                             Haftasonu: {stat.weekendShifts} | Haftaiçi: {stat.weekdayShifts}
                                         </div>
                                     </div>
-                                    <div style={{ textAlign: 'right' }}>
+                                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
                                         <div style={{
-                                            fontSize: '1.1rem',
+                                            fontSize: '1rem',
                                             fontWeight: '700',
                                             color: isOver ? '#f87171' : (isTargetMet ? '#4ade80' : 'var(--color-text)')
                                         }}>
-                                            {stat.shiftCount} <span style={{ fontSize: '0.8rem', fontWeight: '400', color: 'var(--color-text-muted)' }}>/ {stat.targetShifts}</span>
+                                            {stat.shiftCount} <span style={{ fontSize: '0.75rem', fontWeight: '400', color: 'var(--color-text-muted)' }}>/ {stat.targetShifts}</span>
                                         </div>
                                         <div style={{
-                                            width: '60px',
-                                            height: '4px',
+                                            width: '50px',
+                                            height: '3px',
                                             background: '#333',
                                             borderRadius: '2px',
-                                            marginTop: '4px',
-                                            overflow: 'hidden'
+                                            marginTop: '3px',
+                                            overflow: 'hidden',
+                                            marginLeft: 'auto'
                                         }}>
                                             <div style={{
                                                 width: `${percent}%`,
