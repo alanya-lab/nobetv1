@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { generateSchedule } from '../utils/schedulerAlgorithm';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isWeekend } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isWeekend, subDays, addDays as addDaysFns } from 'date-fns';
 import { tr } from 'date-fns/locale';
 
 const Scheduler = ({ staffList, constraints, schedule, setSchedule }) => {
@@ -98,6 +98,28 @@ const Scheduler = ({ staffList, constraints, schedule, setSchedule }) => {
             10: { bg: 'rgba(139, 92, 246, 0.2)', border: '#8b5cf6', text: '#c4b5fd' } // Violet
         };
         return colors[seniority] || colors[10];
+    };
+
+    // Helper to check if staff is resting (checks both PAST and FUTURE assignments)
+    const checkRestViolation = (staffId, targetDateStr) => {
+        if (!schedule) return false;
+
+        const targetDate = new Date(targetDateStr);
+        const restDays = Math.ceil(constraints.minRestHours / 24);
+        const requiredDayGap = 1 + restDays; // 1 (the day itself) + rest days
+
+        for (let i = 1; i < requiredDayGap; i++) {
+            // Check Past
+            const pastDate = subDays(targetDate, i);
+            const pastString = format(pastDate, 'yyyy-MM-dd');
+            if (schedule[pastString]?.find(s => s.id === staffId)) return true;
+
+            // Check Future
+            const futureDate = addDaysFns(targetDate, i);
+            const futureString = format(futureDate, 'yyyy-MM-dd');
+            if (schedule[futureString]?.find(s => s.id === staffId)) return true;
+        }
+        return false;
     };
 
     // --- Drag and Drop Handlers ---
@@ -254,6 +276,7 @@ const Scheduler = ({ staffList, constraints, schedule, setSchedule }) => {
                                             onDragEnd={handleDragEnd}
                                             onDragOver={handleDragOver}
                                             onDrop={(e) => handleDrop(e, dateString, staff)}
+                                            className={checkRestViolation(staff.id, dateString) ? 'violation-blink' : ''}
                                             style={{
                                                 fontSize: '0.75rem',
                                                 padding: '3px 6px',
@@ -380,6 +403,28 @@ const Scheduler = ({ staffList, constraints, schedule, setSchedule }) => {
 
     return (
         <div className="card">
+            <style>
+                {`
+                    @keyframes blink-violation {
+                        0% { opacity: 1; }
+                        50% { opacity: 0.4; background-color: rgba(239, 68, 68, 0.4) !important; }
+                        100% { opacity: 1; }
+                    }
+                    .violation-blink {
+                        animation: blink-violation 1.5s infinite ease-in-out;
+                        border: 1.5px solid #ef4444 !important;
+                        position: relative;
+                        z-index: 1;
+                    }
+                    .violation-blink::after {
+                        content: '⚠️';
+                        position: absolute;
+                        right: -2px;
+                        top: -8px;
+                        font-size: 0.7rem;
+                    }
+                `}
+            </style>
             <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
