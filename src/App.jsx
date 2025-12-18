@@ -60,6 +60,28 @@ function App() {
         return defaultConstraints;
     });
 
+    const [schedule, setSchedule] = useState(() => {
+        const saved = localStorage.getItem('currentSchedule');
+        try {
+            return saved ? JSON.parse(saved) : null;
+        } catch (e) {
+            console.error("Çizelge yüklenirken hata oluştu:", e);
+            return null;
+        }
+    });
+
+    const [scheduleHistory, setScheduleHistory] = useState(() => {
+        const saved = localStorage.getItem('scheduleHistory');
+        try {
+            return saved ? JSON.parse(saved) : [];
+        } catch (e) {
+            console.error("Geçmiş yüklenirken hata oluştu:", e);
+            return [];
+        }
+    });
+
+    const [activeTab, setActiveTab] = useState('staff');
+
     // Save to localStorage whenever state changes
     useEffect(() => {
         localStorage.setItem('staffList', JSON.stringify(staffList));
@@ -113,18 +135,6 @@ function App() {
             setScheduleHistory(prev => prev.filter(item => item.id !== id));
         }
     };
-
-    const [schedule, setSchedule] = useState(() => {
-        const saved = localStorage.getItem('currentSchedule');
-        return saved ? JSON.parse(saved) : null;
-    });
-
-    const [scheduleHistory, setScheduleHistory] = useState(() => {
-        const saved = localStorage.getItem('scheduleHistory');
-        return saved ? JSON.parse(saved) : [];
-    });
-
-    const [activeTab, setActiveTab] = useState('staff');
 
     const tabs = [
         { id: 'staff', label: 'Personel', icon: '👥' },
