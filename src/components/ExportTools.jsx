@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { tr } from 'date-fns/locale';
 
-const ExportTools = ({ schedule, staffList }) => {
+const ExportTools = ({ schedule, staffList, history, onLoadHistory, onDeleteHistory }) => {
     const [copied, setCopied] = useState(false);
 
-    if (!schedule) return null;
+    if (!schedule && (!history || history.length === 0)) return null;
 
     const generateTableData = () => {
+        if (!schedule) return { rows: [], monthTitle: '' };
         const firstDate = Object.keys(schedule).filter(k => !k.startsWith('_'))[0];
         if (!firstDate) return [];
 
@@ -92,23 +93,72 @@ const ExportTools = ({ schedule, staffList }) => {
         <div className="card">
             <h3 style={{ margin: '0 0 16px 0' }}>📥 Dışa Aktar</h3>
 
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                <button onClick={copyAsTable} className="btn btn-ghost">
-                    {copied ? '✓ Kopyalandı!' : '📋 Panoya Kopyala'}
-                </button>
-                <button onClick={downloadAsExcel} className="btn btn-secondary">
-                    📊 Excel/CSV İndir
-                </button>
-            </div>
+            {schedule ? (
+                <>
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                        <button onClick={copyAsTable} className="btn btn-ghost">
+                            {copied ? '✓ Kopyalandı!' : '📋 Panoya Kopyala'}
+                        </button>
+                        <button onClick={downloadAsExcel} className="btn btn-secondary">
+                            📊 Excel/CSV İndir
+                        </button>
+                    </div>
 
-            <p style={{
-                marginTop: '12px',
-                marginBottom: 0,
-                fontSize: '0.8rem',
-                color: 'var(--color-text-muted)'
-            }}>
-                💡 Panoya kopyalayıp Google Sheets veya Excel'e yapıştırabilirsiniz.
-            </p>
+                    <p style={{
+                        marginTop: '12px',
+                        marginBottom: 0,
+                        fontSize: '0.8rem',
+                        color: 'var(--color-text-muted)'
+                    }}>
+                        💡 Panoya kopyalayıp Google Sheets veya Excel'e yapıştırabilirsiniz.
+                    </p>
+                </>
+            ) : (
+                <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
+                    Dışa aktarmak için önce bir çizelge oluşturun veya geçmişten yükleyin.
+                </p>
+            )}
+
+            {history && history.length > 0 && (
+                <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid var(--color-border)' }}>
+                    <h3 style={{ margin: '0 0 16px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        📂 Oluşturulan Listeler
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {history.map(item => (
+                            <div key={item.id} style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                padding: '10px 12px',
+                                background: 'var(--color-bg)',
+                                borderRadius: '8px',
+                                border: '1px solid var(--color-border)'
+                            }}>
+                                <div style={{ fontSize: '0.9rem', fontWeight: '500' }}>
+                                    {item.name}
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button
+                                        onClick={() => onLoadHistory(item)}
+                                        className="btn btn-ghost"
+                                        style={{ padding: '4px 12px', fontSize: '0.8rem' }}
+                                    >
+                                        📖 Aç
+                                    </button>
+                                    <button
+                                        onClick={() => onDeleteHistory(item.id)}
+                                        className="btn btn-ghost"
+                                        style={{ padding: '4px 12px', fontSize: '0.8rem', color: '#fca5a5' }}
+                                    >
+                                        🗑️ Sil
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

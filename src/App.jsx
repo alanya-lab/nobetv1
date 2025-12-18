@@ -69,7 +69,61 @@ function App() {
         localStorage.setItem('constraints', JSON.stringify(constraints));
     }, [constraints]);
 
-    const [schedule, setSchedule] = useState(null);
+    useEffect(() => {
+        if (schedule) {
+            localStorage.setItem('currentSchedule', JSON.stringify(schedule));
+        } else {
+            localStorage.removeItem('currentSchedule');
+        }
+    }, [schedule]);
+
+    useEffect(() => {
+        localStorage.setItem('scheduleHistory', JSON.stringify(scheduleHistory));
+    }, [scheduleHistory]);
+
+    const saveScheduleToHistory = () => {
+        if (!schedule) return;
+
+        const timestamp = new Date().toLocaleString('tr-TR');
+        const monthName = new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric' })
+            .format(new Date(constraints.selectedMonth + '-01'));
+
+        const newEntry = {
+            id: Date.now(),
+            name: `${monthName} (${timestamp})`,
+            schedule: schedule,
+            constraints: { ...constraints },
+            staffList: [...staffList]
+        };
+
+        setScheduleHistory(prev => [newEntry, ...prev]);
+    };
+
+    const loadScheduleFromHistory = (entry) => {
+        if (window.confirm('Bu çizelgeyi yüklemek mevcut çalışmanızı değiştirecektir. Devam edilsin mi?')) {
+            setSchedule(entry.schedule);
+            setConstraints(entry.constraints);
+            setStaffList(entry.staffList);
+            setActiveTab('schedule');
+        }
+    };
+
+    const deleteScheduleFromHistory = (id) => {
+        if (window.confirm('Bu kaydı silmek istediğinize emin misiniz?')) {
+            setScheduleHistory(prev => prev.filter(item => item.id !== id));
+        }
+    };
+
+    const [schedule, setSchedule] = useState(() => {
+        const saved = localStorage.getItem('currentSchedule');
+        return saved ? JSON.parse(saved) : null;
+    });
+
+    const [scheduleHistory, setScheduleHistory] = useState(() => {
+        const saved = localStorage.getItem('scheduleHistory');
+        return saved ? JSON.parse(saved) : [];
+    });
+
     const [activeTab, setActiveTab] = useState('staff');
 
     const tabs = [
@@ -191,6 +245,7 @@ function App() {
                             constraints={constraints}
                             schedule={schedule}
                             setSchedule={setSchedule}
+                            onSaveToHistory={saveScheduleToHistory}
                         />
                         {schedule && (
                             <>
@@ -199,8 +254,25 @@ function App() {
                                     schedule={schedule}
                                     constraints={constraints}
                                 />
-                                <ExportTools schedule={schedule} staffList={staffList} />
+                                <ExportTools
+                                    schedule={schedule}
+                                    staffList={staffList}
+                                    history={scheduleHistory}
+                                    onLoadHistory={loadScheduleFromHistory}
+                                    onDeleteHistory={deleteScheduleFromHistory}
+                                />
                             </>
+                        )}
+                        {!schedule && scheduleHistory.length > 0 && (
+                            <div style={{ marginTop: '2rem' }}>
+                                <ExportTools
+                                    schedule={null}
+                                    staffList={staffList}
+                                    history={scheduleHistory}
+                                    onLoadHistory={loadScheduleFromHistory}
+                                    onDeleteHistory={deleteScheduleFromHistory}
+                                />
+                            </div>
                         )}
                     </>
                 )}

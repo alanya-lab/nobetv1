@@ -3,7 +3,7 @@ import { generateSchedule } from '../utils/schedulerAlgorithm';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isWeekend, subDays, addDays as addDaysFns } from 'date-fns';
 import { tr } from 'date-fns/locale';
 
-const Scheduler = ({ staffList, constraints, schedule, setSchedule }) => {
+const Scheduler = ({ staffList, constraints, schedule, setSchedule, onSaveToHistory }) => {
     const [editingDay, setEditingDay] = useState(null);
     const [copied, setCopied] = useState(false);
     const [draggedItem, setDraggedItem] = useState(null);
@@ -453,6 +453,16 @@ const Scheduler = ({ staffList, constraints, schedule, setSchedule }) => {
                     >
                         ⚙️ Ayarları İndir
                     </button>
+                    {schedule && (
+                        <button
+                            onClick={onSaveToHistory}
+                            className="btn btn-ghost"
+                            style={{ fontSize: '0.85rem' }}
+                            title="Çizelgeyi geçmişe kaydet"
+                        >
+                            💾 Kaydet
+                        </button>
+                    )}
                     {schedule && (
                         <button
                             onClick={copyToClipboard}
