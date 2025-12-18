@@ -244,17 +244,6 @@ export const generateSchedule = (staffList, constraints, selectedDate = new Date
             // 3. Rest Time (Checks Past AND Future assignments)
             if (isResting(staff.id, currentDate, schedule, requiredDayGap)) return false;
 
-            // 4. Seniority Sum Constraints
-            if (constraints.maxSenioritySum > 0) {
-                const currentSum = assignedForDay.reduce((sum, s) => sum + s.seniority, 0);
-                if (currentSum + staff.seniority > constraints.maxSenioritySum) return false;
-            }
-
-            if (constraints.minSenioritySum > 0 && assignedForDay.length === neededCount - 1) {
-                const currentSum = assignedForDay.reduce((sum, s) => sum + s.seniority, 0);
-                if (currentSum + staff.seniority < constraints.minSenioritySum) return false;
-            }
-
             return true;
         });
 
@@ -326,8 +315,32 @@ export const generateSchedule = (staffList, constraints, selectedDate = new Date
 
         // Fill remaining slots
         while (assignedForDay.length < neededCount && candidates.length > 0) {
+            // --- DYNAMIC SENIORITY SUM FILTERING ---
+            let filteredCandidates = candidates.filter(staff => {
+                if (constraints.maxSenioritySum > 0) {
+                    const currentSum = assignedForDay.reduce((sum, s) => sum + s.seniority, 0);
+                    if (currentSum + staff.seniority > constraints.maxSenioritySum) return false;
+                }
+                if (constraints.minSenioritySum > 0 && assignedForDay.length === neededCount - 1) {
+                    const currentSum = assignedForDay.reduce((sum, s) => sum + s.seniority, 0);
+                    if (currentSum + staff.seniority < constraints.minSenioritySum) return false;
+                }
+                return true;
+            });
+
+            if (filteredCandidates.length === 0) {
+                if (candidates.length > 0) {
+                    logs.push({
+                        type: 'warning',
+                        icon: '⚖️',
+                        message: `${dayOfMonth}. gün: Kıdem toplamı kuralı (Min:${constraints.minSenioritySum || '-'}, Max:${constraints.maxSenioritySum || '-'}) nedeniyle uygun personel seçilemedi!`
+                    });
+                }
+                break;
+            }
+
             // Calculate scores
-            let candidatesWithScores = candidates.map(staff => ({
+            let candidatesWithScores = filteredCandidates.map(staff => ({
                 staff,
                 baseScore: calculateScore(staff)
             }));
