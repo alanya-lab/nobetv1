@@ -316,6 +316,86 @@ const ConstraintsForm = ({ constraints, setConstraints }) => {
                     )}
                 </div>
             </div>
+
+            {/* Task Columns */}
+            <div style={{ gridColumn: '1 / -1', marginTop: '10px', padding: '16px', backgroundColor: 'var(--color-bg)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+                <h4 style={{ margin: '0 0 12px 0', fontSize: '1rem' }}>📋 Görev Sütunları</h4>
+                <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: '12px' }}>
+                    "Görevler" sekmesinde görünecek sütunları buradan belirleyebilirsiniz (Örn: Ameliyat 1, Servis, Poliklinik vb.).
+                </p>
+
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                    <input
+                        type="text"
+                        id="newTaskColumn"
+                        placeholder="Yeni sütun adı..."
+                        style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid var(--color-border)' }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                const val = e.target.value.trim();
+                                if (val) {
+                                    const current = constraints.taskColumns || [];
+                                    if (!current.includes(val)) {
+                                        setConstraints({ ...constraints, taskColumns: [...current, val] });
+                                        e.target.value = '';
+                                    }
+                                }
+                            }
+                        }}
+                    />
+                    <button
+                        onClick={() => {
+                            const input = document.getElementById('newTaskColumn');
+                            const val = input.value.trim();
+                            if (val) {
+                                const current = constraints.taskColumns || [];
+                                if (!current.includes(val)) {
+                                    setConstraints({ ...constraints, taskColumns: [...current, val] });
+                                    input.value = '';
+                                }
+                            }
+                        }}
+                        className="btn btn-primary"
+                        style={{ padding: '8px 16px' }}
+                    >
+                        Ekle
+                    </button>
+                </div>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {(constraints.taskColumns || []).map((col, idx) => (
+                        <div key={idx} style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '6px 10px',
+                            background: 'var(--color-surface)',
+                            border: '1px solid var(--color-border)',
+                            borderRadius: '6px',
+                            fontSize: '0.9rem'
+                        }}>
+                            <span>{col}</span>
+                            <button
+                                onClick={() => {
+                                    const current = constraints.taskColumns || [];
+                                    setConstraints({ ...constraints, taskColumns: current.filter((_, i) => i !== idx) });
+                                }}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    color: '#ef4444',
+                                    padding: '0 2px',
+                                    fontSize: '1rem',
+                                    lineHeight: 1
+                                }}
+                            >
+                                ×
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            </div>
         </div>
     );
 };

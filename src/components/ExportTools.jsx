@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { tr } from 'date-fns/locale';
 
-const ExportTools = ({ schedule, staffList, history, onLoadHistory, onDeleteHistory }) => {
+const ExportTools = ({ schedule, staffList, history, onLoadHistory, onDeleteHistory, tasks, constraints }) => {
     const [copied, setCopied] = useState(false);
 
     if (!schedule && (!history || history.length === 0)) return null;
@@ -35,6 +35,11 @@ const ExportTools = ({ schedule, staffList, history, onLoadHistory, onDeleteHist
         for (let i = 1; i <= maxAssigned; i++) {
             header.push(`Nöbetçi ${i}`);
         }
+
+        // Add Task Columns to Header
+        const taskColumns = constraints?.taskColumns || [];
+        taskColumns.forEach(col => header.push(col));
+
         rows.push(header);
 
         days.forEach(day => {
@@ -51,6 +56,19 @@ const ExportTools = ({ schedule, staffList, history, onLoadHistory, onDeleteHist
                     row.push('-');
                 }
             }
+
+            // Add Task Assignments
+            const dayTasks = tasks ? (tasks[dateString] || {}) : {};
+            taskColumns.forEach((_, idx) => {
+                const staffId = dayTasks[idx];
+                if (staffId) {
+                    const staff = staffList.find(s => s.id === staffId);
+                    row.push(staff ? (staff.name || `${staff.firstName} ${staff.lastName}`) : '?');
+                } else {
+                    row.push('');
+                }
+            });
+
             rows.push(row);
         });
 

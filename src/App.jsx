@@ -4,7 +4,9 @@ import ConstraintsForm from './components/ConstraintsForm';
 import UnavailabilityGrid from './components/UnavailabilityGrid';
 import Scheduler from './components/Scheduler';
 import Statistics from './components/Statistics';
+import Statistics from './components/Statistics';
 import ExportTools from './components/ExportTools';
+import TaskDistribution from './components/TaskDistribution';
 
 function App() {
     // Load initial state from localStorage if available
@@ -36,8 +38,10 @@ function App() {
             slotSystem: {
                 enabled: false,
                 slot1Seniorities: [6, 5, 4],
+                slot1Seniorities: [6, 5, 4],
                 slot2Seniorities: [3, 2, 1]
-            }
+            },
+            taskColumns: []
         };
 
         if (saved) {
@@ -49,7 +53,9 @@ function App() {
                     ...parsed,
                     // Ensure nested objects are also merged correctly
                     dailyNeeds: { ...defaultConstraints.dailyNeeds, ...(parsed.dailyNeeds || {}) },
-                    slotSystem: { ...defaultConstraints.slotSystem, ...(parsed.slotSystem || {}) }
+                    dailyNeeds: { ...defaultConstraints.dailyNeeds, ...(parsed.dailyNeeds || {}) },
+                    slotSystem: { ...defaultConstraints.slotSystem, ...(parsed.slotSystem || {}) },
+                    taskColumns: parsed.taskColumns || []
                 };
             } catch (e) {
                 console.error("Ayarlar yüklenirken hata oluştu:", e);
@@ -80,6 +86,16 @@ function App() {
         }
     });
 
+    const [tasks, setTasks] = useState(() => {
+        const saved = localStorage.getItem('tasks');
+        try {
+            return saved ? JSON.parse(saved) : {};
+        } catch (e) {
+            console.error("Görevler yüklenirken hata oluştu:", e);
+            return {};
+        }
+    });
+
     const [activeTab, setActiveTab] = useState('staff');
 
     // Save to localStorage whenever state changes
@@ -103,6 +119,10 @@ function App() {
         localStorage.setItem('scheduleHistory', JSON.stringify(scheduleHistory));
     }, [scheduleHistory]);
 
+    useEffect(() => {
+        localStorage.setItem('tasks', JSON.stringify(tasks));
+    }, [tasks]);
+
     const saveScheduleToHistory = () => {
         if (!schedule) return;
 
@@ -113,9 +133,11 @@ function App() {
         const newEntry = {
             id: Date.now(),
             name: `${monthName} (${timestamp})`,
+            name: `${monthName} (${timestamp})`,
             schedule: schedule,
             constraints: { ...constraints },
-            staffList: [...staffList]
+            staffList: [...staffList],
+            tasks: { ...tasks }
         };
 
         setScheduleHistory(prev => [newEntry, ...prev]);
@@ -125,7 +147,10 @@ function App() {
         if (window.confirm('Bu çizelgeyi yüklemek mevcut çalışmanızı değiştirecektir. Devam edilsin mi?')) {
             setSchedule(entry.schedule);
             setConstraints(entry.constraints);
+            setSchedule(entry.schedule);
+            setConstraints(entry.constraints);
             setStaffList(entry.staffList);
+            setTasks(entry.tasks || {});
             setActiveTab('schedule');
         }
     };
@@ -139,8 +164,10 @@ function App() {
     const tabs = [
         { id: 'staff', label: 'Personel', icon: '👥' },
         { id: 'unavailability', label: 'Müsaitlik', icon: '📅' },
+        { id: 'unavailability', label: 'Müsaitlik', icon: '📅' },
         { id: 'constraints', label: 'Ayarlar', icon: '⚙️' },
-        { id: 'schedule', label: 'Çizelge', icon: '📊' }
+        { id: 'schedule', label: 'Çizelge', icon: '📊' },
+        { id: 'tasks', label: 'Görevler', icon: '📋' }
     ];
 
     return (
@@ -285,6 +312,15 @@ function App() {
                             </div>
                         )}
                     </>
+                )}
+                {activeTab === 'tasks' && (
+                    <TaskDistribution
+                        staffList={staffList}
+                        schedule={schedule}
+                        constraints={constraints}
+                        tasks={tasks}
+                        setTasks={setTasks}
+                    />
                 )}
             </main>
 
