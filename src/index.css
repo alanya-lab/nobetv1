@@ -375,3 +375,51 @@ input[type="range"]::-webkit-slider-thumb:hover {
     font-size: 0.85rem;
   }
 }
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+
+  .print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: white;
+    color: black;
+    padding: 20px;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  /* Ensure table borders are visible in print */
+  table,
+  th,
+  td {
+    border: 1px solid #000 !important;
+    color: black !important;
+  }
+
+  /* Hide buttons and other UI elements just in case */
+  .btn,
+  header,
+  footer,
+  nav {
+    display: none !important;
+  }
+
+  /* Reset background colors for print */
+  tr,
+  td,
+  th {
+    background: white !important;
+  }
+}

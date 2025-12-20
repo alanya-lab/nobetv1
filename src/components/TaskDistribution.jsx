@@ -2,7 +2,21 @@ import React from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, subDays, isSameDay } from 'date-fns';
 import { tr } from 'date-fns/locale';
 
-const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks }) => {
+const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, onSaveToHistory }) => {
+    // Helper: Get Seniority Color
+    const getSeniorityColor = (seniority) => {
+        if (!seniority) return 'var(--color-text)';
+        // Gradient from Red (1) to Blue (10)
+        const colors = {
+            1: '#ef4444', 2: '#f97316', 3: '#f59e0b', 4: '#eab308', 5: '#84cc16',
+            6: '#22c55e', 7: '#10b981', 8: '#14b8a6', 9: '#06b6d4', 10: '#3b82f6'
+        };
+        return colors[seniority] || 'var(--color-text)';
+    };
+
+    const handlePrint = () => {
+        window.print();
+    };
     // 1. Initialize or get selected month
     const selectedDate = constraints.selectedMonth ? new Date(constraints.selectedMonth + '-01') : new Date();
     const monthStart = startOfMonth(selectedDate);
@@ -107,87 +121,119 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks })
 
     return (
         <div className="card" style={{ overflowX: 'auto' }}>
-            <h3 style={{ marginBottom: '16px' }}>Günlük Görev Dağılımı</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h3 style={{ margin: 0 }}>Günlük Görev Dağılımı</h3>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <button onClick={handlePrint} className="btn btn-secondary" style={{ fontSize: '0.85rem', padding: '8px 12px' }}>
+                        🖨️ Yazdır
+                    </button>
+                    {onSaveToHistory && (
+                        <button onClick={onSaveToHistory} className="btn btn-primary" style={{ fontSize: '0.85rem', padding: '8px 12px' }}>
+                            💾 Kaydet
+                        </button>
+                    )}
+                </div>
+            </div>
 
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                <thead>
-                    <tr style={{ background: 'var(--color-bg)', borderBottom: '2px solid var(--color-border)' }}>
-                        <th style={{ padding: '10px', textAlign: 'left', minWidth: '120px' }}>Tarih</th>
-                        {taskColumns.map((col, idx) => (
-                            <th key={idx} style={{ padding: '10px', textAlign: 'left', minWidth: '150px' }}>{col}</th>
-                        ))}
-                        <th style={{ padding: '10px', textAlign: 'left', minWidth: '200px' }}>Durum</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {days.map(day => {
-                        const dateString = format(day, 'yyyy-MM-dd');
-                        const dayName = format(day, 'd MMMM EEEE', { locale: tr });
-                        const stats = getDayStats(dateString);
-                        const dayTasks = tasks[dateString] || {};
+            <div className="print-area">
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <thead>
+                        <tr style={{ background: 'var(--color-bg)', borderBottom: '2px solid var(--color-border)' }}>
+                            <th style={{ padding: '10px', textAlign: 'left', minWidth: '100px' }}>Tarih</th>
+                            <th style={{ padding: '10px', textAlign: 'left', minWidth: '120px' }}>Nöbetçi 1</th>
+                            <th style={{ padding: '10px', textAlign: 'left', minWidth: '120px' }}>Nöbetçi 2</th>
+                            {taskColumns.map((col, idx) => (
+                                <th key={idx} style={{ padding: '10px', textAlign: 'left', minWidth: '150px' }}>{col}</th>
+                            ))}
+                            <th style={{ padding: '10px', textAlign: 'left', minWidth: '150px' }} className="no-print">Durum</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {days.map(day => {
+                            const dateString = format(day, 'yyyy-MM-dd');
+                            const dayName = format(day, 'd MMMM EEEE', { locale: tr });
+                            const stats = getDayStats(dateString);
+                            const dayTasks = tasks[dateString] || {};
 
-                        return (
-                            <tr key={dateString} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                                <td style={{ padding: '8px', fontWeight: '500' }}>{dayName}</td>
-                                {taskColumns.map((col, idx) => {
-                                    const assignedId = dayTasks[idx];
-                                    const availableStaff = getAvailableStaff(dateString, idx);
+                            // Get staff on shift for this day
+                            const shiftStaff = schedule && schedule[dateString] ? schedule[dateString] : [];
+                            const shiftStaff1 = shiftStaff[0];
+                            const shiftStaff2 = shiftStaff[1];
 
-                                    // If currently assigned person is not in available list (e.g. became unavailable later), add them back to option
-                                    // so we can see who it is
-                                    const currentStaff = staffList.find(s => s.id === assignedId);
+                            return (
+                                <tr key={dateString} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                                    <td style={{ padding: '8px', fontWeight: '500' }}>{dayName}</td>
 
-                                    return (
-                                        <td key={idx} style={{ padding: '4px' }}>
-                                            <select
-                                                value={assignedId || ""}
-                                                onChange={(e) => handleTaskChange(dateString, idx, e.target.value)}
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '6px',
-                                                    borderRadius: '4px',
-                                                    border: '1px solid var(--color-border)',
-                                                    background: assignedId ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
-                                                    fontSize: '0.85rem'
-                                                }}
-                                            >
-                                                <option value="">- Seçiniz -</option>
-                                                {currentStaff && !availableStaff.find(s => s.id === currentStaff.id) && (
-                                                    <option value={currentStaff.id}>
-                                                        {currentStaff.name} (Uygun Değil!)
-                                                    </option>
-                                                )}
-                                                {availableStaff.map(s => (
-                                                    <option key={s.id} value={s.id}>
-                                                        {s.name}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </td>
-                                    );
-                                })}
-                                <td style={{ padding: '8px' }}>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '0.75rem' }}>
-                                        <div>
-                                            <span style={{ color: 'var(--color-text-muted)' }}>Müsait:</span> <b>{stats.totalAvailable}</b>
-                                            <span style={{ margin: '0 4px', color: '#e2e8f0' }}>|</span>
-                                            <span style={{ color: 'var(--color-primary)' }}>Atanan:</span> <b>{stats.assignedCount}</b>
-                                        </div>
-                                        {stats.unassignedNames.length > 0 ? (
-                                            <div style={{ color: '#f59e0b', marginTop: '2px', lineHeight: '1.2' }} title={stats.unassignedNames.join(', ')}>
-                                                Boşta: {stats.unassignedNames.slice(0, 3).join(', ')}
-                                                {stats.unassignedNames.length > 3 && ` +${stats.unassignedNames.length - 3}`}
+                                    {/* Shift Columns */}
+                                    <td style={{ padding: '8px', color: shiftStaff1 ? getSeniorityColor(shiftStaff1.seniority) : 'inherit', fontWeight: '500' }}>
+                                        {shiftStaff1 ? shiftStaff1.name : '-'}
+                                    </td>
+                                    <td style={{ padding: '8px', color: shiftStaff2 ? getSeniorityColor(shiftStaff2.seniority) : 'inherit', fontWeight: '500' }}>
+                                        {shiftStaff2 ? shiftStaff2.name : '-'}
+                                    </td>
+
+                                    {taskColumns.map((col, idx) => {
+                                        const assignedId = dayTasks[idx];
+                                        const availableStaff = getAvailableStaff(dateString, idx);
+
+                                        // If currently assigned person is not in available list (e.g. became unavailable later), add them back to option
+                                        // so we can see who it is
+                                        const currentStaff = staffList.find(s => s.id === assignedId);
+
+                                        return (
+                                            <td key={idx} style={{ padding: '4px' }}>
+                                                <select
+                                                    value={assignedId || ""}
+                                                    onChange={(e) => handleTaskChange(dateString, idx, e.target.value)}
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '6px',
+                                                        borderRadius: '4px',
+                                                        border: '1px solid var(--color-border)',
+                                                        background: '#ffffff', // Force white background
+                                                        color: '#1e293b', // Force dark text
+                                                        fontSize: '0.85rem',
+                                                        fontWeight: '500'
+                                                    }}
+                                                >
+                                                    <option value="" style={{ color: '#94a3b8' }}>- Seçiniz -</option>
+                                                    {currentStaff && !availableStaff.find(s => s.id === currentStaff.id) && (
+                                                        <option value={currentStaff.id} style={{ color: 'red' }}>
+                                                            {currentStaff.name} (Uygun Değil!)
+                                                        </option>
+                                                    )}
+                                                    {availableStaff.map(s => (
+                                                        <option key={s.id} value={s.id} style={{ color: getSeniorityColor(s.seniority), fontWeight: '600' }}>
+                                                            {s.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </td>
+                                        );
+                                    })}
+                                    <td style={{ padding: '8px' }} className="no-print">
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '0.75rem' }}>
+                                            <div>
+                                                <span style={{ color: 'var(--color-text-muted)' }}>Müsait:</span> <b>{stats.totalAvailable}</b>
+                                                <span style={{ margin: '0 4px', color: '#e2e8f0' }}>|</span>
+                                                <span style={{ color: 'var(--color-primary)' }}>Atanan:</span> <b>{stats.assignedCount}</b>
                                             </div>
-                                        ) : (
-                                            <div style={{ color: '#22c55e' }}>✓ Herkes atandı</div>
-                                        )}
-                                    </div>
-                                </td>
-                            </tr>
-                        );
-                    })}
-                </tbody>
-            </table>
+                                            {stats.unassignedNames.length > 0 ? (
+                                                <div style={{ color: '#f59e0b', marginTop: '2px', lineHeight: '1.2' }} title={stats.unassignedNames.join(', ')}>
+                                                    Boşta: {stats.unassignedNames.slice(0, 3).join(', ')}
+                                                    {stats.unassignedNames.length > 3 && ` +${stats.unassignedNames.length - 3}`}
+                                                </div>
+                                            ) : (
+                                                <div style={{ color: '#22c55e' }}>✓ Herkes atandı</div>
+                                            )}
+                                        </div>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 };

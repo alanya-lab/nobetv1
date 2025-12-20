@@ -30,7 +30,16 @@ const Scheduler = ({ staffList, constraints, schedule, setSchedule, onSaveToHist
     };
 
     // Add staff to a specific day
+    // Add staff to a specific day
     const addToDay = (dateString, staff) => {
+        // Check availability
+        if (staff.leaveDays?.includes(dateString)) {
+            if (!window.confirm(`${staff.name} bu tarihte İZİNLİ görünüyor. Yine de eklemek istiyor musunuz?`)) return;
+        }
+        if (staff.unavailability?.includes(dateString)) {
+            if (!window.confirm(`${staff.name} bu tarihte MÜSAİT DEĞİL olarak işaretlenmiş. Yine de eklemek istiyor musunuz?`)) return;
+        }
+
         setSchedule(prev => ({
             ...prev,
             [dateString]: [...(prev[dateString] || []), staff]
@@ -148,6 +157,22 @@ const Scheduler = ({ staffList, constraints, schedule, setSchedule, onSaveToHist
 
         // Don't do anything if dropped on same person
         if (sourceDate === targetDate && sourceStaff.id === targetStaff.id) return;
+
+        // Check constraints for Source Staff on Target Date
+        if (sourceStaff.leaveDays?.includes(targetDate)) {
+            if (!window.confirm(`${sourceStaff.name} ${targetDate} tarihinde İZİNLİ. Değişimi onaylıyor musunuz?`)) return;
+        }
+        if (sourceStaff.unavailability?.includes(targetDate)) {
+            if (!window.confirm(`${sourceStaff.name} ${targetDate} tarihinde MÜSAİT DEĞİL. Değişimi onaylıyor musunuz?`)) return;
+        }
+
+        // Check constraints for Target Staff on Source Date
+        if (targetStaff.leaveDays?.includes(sourceDate)) {
+            if (!window.confirm(`${targetStaff.name} ${sourceDate} tarihinde İZİNLİ. Değişimi onaylıyor musunuz?`)) return;
+        }
+        if (targetStaff.unavailability?.includes(sourceDate)) {
+            if (!window.confirm(`${targetStaff.name} ${sourceDate} tarihinde MÜSAİT DEĞİL. Değişimi onaylıyor musunuz?`)) return;
+        }
 
         // Perform the swap
         setSchedule(prev => {

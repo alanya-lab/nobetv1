@@ -319,6 +319,7 @@ function App() {
                         constraints={constraints}
                         tasks={tasks}
                         setTasks={setTasks}
+                        onSaveToHistory={saveScheduleToHistory}
                     />
                 )}
             </main>

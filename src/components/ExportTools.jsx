@@ -107,6 +107,56 @@ const ExportTools = ({ schedule, staffList, history, onLoadHistory, onDeleteHist
         URL.revokeObjectURL(url);
     };
 
+    const handleBackupDownload = () => {
+        const data = {
+            staffList: localStorage.getItem('staffList'),
+            constraints: localStorage.getItem('constraints'),
+            currentSchedule: localStorage.getItem('currentSchedule'),
+            scheduleHistory: localStorage.getItem('scheduleHistory'),
+            tasks: localStorage.getItem('tasks'),
+            timestamp: new Date().toISOString(),
+            version: '2.0'
+        };
+
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `vardiya_yedek_${format(new Date(), 'yyyyMMdd_HHmm')}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const handleBackupUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (!window.confirm('Bu işlem mevcut verilerinizi silip yedekten geri yükleyecektir. Emin misiniz?')) {
+            e.target.value = null;
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const data = JSON.parse(event.target.result);
+                if (data.staffList) localStorage.setItem('staffList', data.staffList);
+                if (data.constraints) localStorage.setItem('constraints', data.constraints);
+                if (data.currentSchedule) localStorage.setItem('currentSchedule', data.currentSchedule);
+                if (data.scheduleHistory) localStorage.setItem('scheduleHistory', data.scheduleHistory);
+                if (data.tasks) localStorage.setItem('tasks', data.tasks);
+
+                alert('Yedek başarıyla yüklendi! Sayfa yenileniyor...');
+                window.location.reload();
+            } catch (error) {
+                alert('Dosya okunamadı veya hatalı format!');
+                console.error(error);
+            }
+        };
+        reader.readAsText(file);
+    };
+
     return (
         <div className="card">
             <h3 style={{ margin: '0 0 16px 0' }}>📥 Dışa Aktar</h3>
@@ -177,6 +227,39 @@ const ExportTools = ({ schedule, staffList, history, onLoadHistory, onDeleteHist
                     </div>
                 </div>
             )}
+
+            {/* Backup Section */}
+            <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid var(--color-border)' }}>
+                <h3 style={{ margin: '0 0 16px 0' }}>💾 Veri Yedekleme</h3>
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <button onClick={handleBackupDownload} className="btn btn-primary" style={{ background: 'var(--color-surface-hover)', border: '1px solid var(--color-border)' }}>
+                        ⬇️ Yedeği İndir
+                    </button>
+
+                    <div style={{ position: 'relative', overflow: 'hidden', display: 'inline-block' }}>
+                        <button className="btn btn-secondary">
+                            ⬆️ Yedeği Yükle
+                        </button>
+                        <input
+                            type="file"
+                            accept=".json"
+                            onChange={handleBackupUpload}
+                            style={{
+                                position: 'absolute',
+                                left: 0,
+                                top: 0,
+                                opacity: 0,
+                                width: '100%',
+                                height: '100%',
+                                cursor: 'pointer'
+                            }}
+                        />
+                    </div>
+                </div>
+                <p style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem', marginTop: '8px' }}>
+                    Tüm verilerinizi (personel, ayarlar, geçmiş) bilgisayarınıza indirip saklayabilir, daha sonra geri yükleyebilirsiniz.
+                </p>
+            </div>
         </div>
     );
 };
