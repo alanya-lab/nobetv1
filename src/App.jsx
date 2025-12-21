@@ -332,7 +332,7 @@ function App() {
                 fontSize: '0.8rem'
             }}>
                 <p style={{ margin: 0 }}>
-                    Vardiya Çizelgesi v2.0 • {new Date().getFullYear()}
+                    Emre YILDIRIM • {new Date().getFullYear()}
                 </p>
             </footer>
         </div>
@@ -340,3 +340,4 @@ function App() {
 }
 
 export default App;
+
