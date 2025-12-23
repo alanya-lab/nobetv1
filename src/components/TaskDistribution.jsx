@@ -1,12 +1,17 @@
-import React from 'react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, subDays, isSameDay } from 'date-fns';
+import React, { useState } from 'react';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, subDays } from 'date-fns';
 import { tr } from 'date-fns/locale';
+import { distributeTaskColumn } from '../utils/taskDistributionAlgorithm';
+import TaskColumnConfig from './TaskColumnConfig';
 
-const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, onSaveToHistory }) => {
+const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, onSaveToHistory, setConstraints }) => {
+    const [hiddenColumns, setHiddenColumns] = useState(constraints.hiddenTaskColumns || []);
+    const [showConfigModal, setShowConfigModal] = useState(false);
+    const [configColumnIndex, setConfigColumnIndex] = useState(null);
+
     // Helper: Get Seniority Color
     const getSeniorityColor = (seniority) => {
         if (!seniority) return 'var(--color-text)';
-        // Gradient from Red (1) to Blue (10)
         const colors = {
             1: '#ef4444', 2: '#f97316', 3: '#f59e0b', 4: '#eab308', 5: '#84cc16',
             6: '#22c55e', 7: '#10b981', 8: '#14b8a6', 9: '#06b6d4', 10: '#3b82f6'
@@ -17,98 +22,148 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
     const handlePrint = () => {
         window.print();
     };
-    // 1. Initialize or get selected month
+
+    // Initialize month
     const selectedDate = constraints.selectedMonth ? new Date(constraints.selectedMonth + '-01') : new Date();
     const monthStart = startOfMonth(selectedDate);
     const monthEnd = endOfMonth(selectedDate);
     const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
-    // 2. Get Task Columns (default if not set)
     const taskColumns = constraints.taskColumns || [];
+    const shiftColumnNames = constraints.shiftColumnNames || ['Nöbetçi 1', 'Nöbetçi 2'];
 
-    // 3. Helper: Get available staff for a specific day and task
-    const getAvailableStaff = (dateString, currentTaskIndex) => {
+    // Helper: Get available staff for a specific day and task
+    const getAvailableStaff = (dateString, currentTaskIndex, currentSubIdx) => {
         const dayDate = new Date(dateString);
         const prevDate = subDays(dayDate, 1);
         const prevDateString = format(prevDate, 'yyyy-MM-dd');
 
-        // Get staff who worked the previous night (Shift)
         const prevShiftStaff = schedule && schedule[prevDateString] ? schedule[prevDateString] : [];
         const prevShiftIds = prevShiftStaff.map(s => s.id);
 
-        // Get staff already assigned to OTHER tasks on THIS day
         const dayTasks = tasks[dateString] || {};
-        const assignedToOtherTasksIds = [];
-        taskColumns.forEach((col, idx) => {
-            if (idx !== currentTaskIndex && dayTasks[idx]) {
-                assignedToOtherTasksIds.push(dayTasks[idx]);
-            }
-        });
 
-        return staffList.filter(staff => {
-            // Filter 1: Is on leave?
-            const isLeave = staff.leaveDays && staff.leaveDays.includes(format(dayDate, 'yyyy-MM-dd'));
-            if (isLeave) return false;
+        return staffList.map(staff => {
+            let status = 'available';
+            let reason = '';
 
-            // Filter 2: Worked previous night shift?
-            if (prevShiftIds.includes(staff.id)) return false;
-
-            // Filter 3: Already assigned to another task today?
-            if (assignedToOtherTasksIds.includes(staff.id)) return false;
-
-            return true;
-        });
-    };
-
-    // 4. Handle Assignment Change
-    const handleTaskChange = (dateString, taskIndex, staffId) => {
-        setTasks(prev => {
-            const dayTasks = prev[dateString] || {};
-            const newDayTasks = { ...dayTasks };
-
-            if (staffId === "") {
-                delete newDayTasks[taskIndex];
-            } else {
-                newDayTasks[taskIndex] = parseInt(staffId);
-            }
-
-            return {
-                ...prev,
-                [dateString]: newDayTasks
-            };
-        });
-    };
-
-    // 5. Calculate Stats per Day
-    const getDayStats = (dateString) => {
-        const dayTasks = tasks[dateString] || {};
-        const assignedCount = Object.keys(dayTasks).length;
-
-        // Calculate total available staff (not on leave, not post-shift)
-        const dayDate = new Date(dateString);
-        const prevDate = subDays(dayDate, 1);
-        const prevDateString = format(prevDate, 'yyyy-MM-dd');
-        const prevShiftStaff = schedule && schedule[prevDateString] ? schedule[prevDateString] : [];
-        const prevShiftIds = prevShiftStaff.map(s => s.id);
-
-        const availableStaff = staffList.filter(staff => {
+            // 1. Check Leave
             const isLeave = staff.leaveDays && staff.leaveDays.includes(dateString);
-            if (isLeave) return false;
-            if (prevShiftIds.includes(staff.id)) return false;
-            return true;
+            const isUnavailable = staff.unavailability && staff.unavailability.includes(dateString);
+            if (isLeave) {
+                status = 'busy';
+                reason = 'İzinli';
+            } else if (isUnavailable) {
+                status = 'busy';
+                reason = 'Müsait Değil';
+            }
+            // 2. Check Previous Night Shift
+            else if (prevShiftIds.includes(staff.id)) {
+                status = 'busy';
+                reason = 'Nöbet Ertesi';
+            }
+            // 3. Check Other Task Columns
+            else {
+                for (let idx = 0; idx < taskColumns.length; idx++) {
+                    const assigned = dayTasks[idx];
+                    const assignedArray = Array.isArray(assigned) ? assigned : (assigned ? [assigned] : []);
+
+                    if (idx === currentTaskIndex) {
+                        // Check other slots in the SAME column
+                        if (assignedArray.some((id, sIdx) => id === staff.id && sIdx !== currentSubIdx)) {
+                            status = 'busy';
+                            reason = 'Aynı Görev (Diğer Slot)';
+                            break;
+                        }
+                    } else {
+                        // Check other columns
+                        if (assignedArray.includes(staff.id)) {
+                            status = 'busy';
+                            reason = 'Başka Görev';
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return { ...staff, status, reason };
+        });
+    };
+
+    // Toggle column visibility
+    const toggleColumnVisibility = (columnIndex) => {
+        const newHidden = hiddenColumns.includes(columnIndex)
+            ? hiddenColumns.filter(i => i !== columnIndex)
+            : [...hiddenColumns, columnIndex];
+
+        setHiddenColumns(newHidden);
+
+        // Save to constraints
+        setConstraints(prev => ({
+            ...prev,
+            hiddenTaskColumns: newHidden
+        }));
+    };
+
+    // Auto-distribute for a column
+    const handleAutoDistribute = (columnIndex, fillEmptyOnly) => {
+        const columnConfig = constraints.taskColumnConfig?.[columnIndex] || {};
+
+        if (!columnConfig.eligibleStaffIds && !columnConfig.eligibleSeniorities) {
+            alert('Bu sütun için önce ayarları yapılandırın (⚙️ butonuna tıklayın)');
+            return;
+        }
+
+        const confirmMsg = fillEmptyOnly
+            ? 'Boş hücreleri otomatik doldurmak istiyor musunuz?'
+            : 'Mevcut atamaları silip sıfırdan dağıtmak istiyor musunuz?';
+
+        if (!window.confirm(confirmMsg)) return;
+
+        const newTasks = distributeTaskColumn({
+            days,
+            staffList,
+            schedule,
+            currentTasks: tasks,
+            columnConfig,
+            columnIndex,
+            fillEmptyOnly
         });
 
-        const totalAvailable = availableStaff.length;
-        const remaining = totalAvailable - assignedCount;
-
-        // Get names of unassigned staff
-        const assignedIds = Object.values(dayTasks);
-        const unassignedNames = availableStaff
-            .filter(s => !assignedIds.includes(s.id))
-            .map(s => s.name || `${s.firstName} ${s.lastName}`);
-
-        return { totalAvailable, assignedCount, remaining, unassignedNames };
+        setTasks(newTasks);
     };
+
+    // Calculate statistics per staff
+    const calculateStaffStats = () => {
+        const stats = {};
+        staffList.forEach(staff => {
+            stats[staff.id] = { name: staff.name, seniority: staff.seniority, counts: {} };
+            taskColumns.forEach((_, idx) => {
+                stats[staff.id].counts[idx] = 0;
+            });
+        });
+
+        days.forEach(day => {
+            const dateString = format(day, 'yyyy-MM-dd');
+            const dayTasks = tasks[dateString] || {};
+
+            taskColumns.forEach((_, idx) => {
+                const assigned = dayTasks[idx];
+                if (assigned) {
+                    const ids = Array.isArray(assigned) ? assigned : [assigned];
+                    ids.forEach(id => {
+                        if (stats[id]) {
+                            stats[id].counts[idx]++;
+                        }
+                    });
+                }
+            });
+        });
+
+        return Object.values(stats).sort((a, b) => b.seniority - a.seniority);
+    };
+
+    const staffStats = calculateStaffStats();
 
     if (taskColumns.length === 0) {
         return (
@@ -136,104 +191,239 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
             </div>
 
             <div className="print-area">
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
                     <thead>
                         <tr style={{ background: 'var(--color-bg)', borderBottom: '2px solid var(--color-border)' }}>
-                            <th style={{ padding: '10px', textAlign: 'left', minWidth: '100px' }}>Tarih</th>
-                            <th style={{ padding: '10px', textAlign: 'left', minWidth: '120px' }}>Nöbetçi 1</th>
-                            <th style={{ padding: '10px', textAlign: 'left', minWidth: '120px' }}>Nöbetçi 2</th>
-                            {taskColumns.map((col, idx) => (
-                                <th key={idx} style={{ padding: '10px', textAlign: 'left', minWidth: '150px' }}>{col}</th>
-                            ))}
-                            <th style={{ padding: '10px', textAlign: 'left', minWidth: '150px' }} className="no-print">Durum</th>
+                            <th style={{ padding: '6px 8px', textAlign: 'left', minWidth: '90px' }}>Tarih</th>
+                            <th style={{ padding: '6px 8px', textAlign: 'left', minWidth: '100px' }}>{shiftColumnNames[0]}</th>
+                            <th style={{ padding: '6px 8px', textAlign: 'left', minWidth: '100px' }}>{shiftColumnNames[1]}</th>
+                            {taskColumns.map((col, idx) => {
+                                if (hiddenColumns.includes(idx)) return null;
+
+                                const config = constraints.taskColumnConfig?.[idx] || {};
+                                const maxPerDay = config.maxPerDay || 1;
+
+                                // Create sub-columns
+                                return Array.from({ length: maxPerDay }).map((_, subIdx) => (
+                                    <th key={`${idx}-${subIdx}`} style={{ padding: '6px 8px', textAlign: 'left', minWidth: '110px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'space-between' }}>
+                                            <span style={{ fontSize: '0.7rem', whiteSpace: 'nowrap' }}>{col} {maxPerDay > 1 ? (subIdx + 1) : ''}</span>
+                                            {subIdx === 0 && (
+                                                <div className="no-print" style={{ display: 'flex', gap: '4px' }}>
+                                                    <button
+                                                        onClick={() => setConfigColumnIndex(idx)}
+                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', padding: '2px' }}
+                                                        title="Ayarlar"
+                                                    >
+                                                        ⚙️
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleAutoDistribute(idx, true)}
+                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', padding: '2px' }}
+                                                        title="Boşları Doldur"
+                                                    >
+                                                        ➕
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleAutoDistribute(idx, false)}
+                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', padding: '2px' }}
+                                                        title="Sıfırdan Dağıt"
+                                                    >
+                                                        🔄
+                                                    </button>
+                                                    <button
+                                                        onClick={() => toggleColumnVisibility(idx)}
+                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', padding: '2px' }}
+                                                        title="Gizle"
+                                                    >
+                                                        👁️
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </th>
+                                ));
+                            })}
                         </tr>
                     </thead>
                     <tbody>
                         {days.map(day => {
                             const dateString = format(day, 'yyyy-MM-dd');
-                            const dayName = format(day, 'd MMMM EEEE', { locale: tr });
-                            const stats = getDayStats(dateString);
+                            const dayName = format(day, 'd MMM EEE', { locale: tr });
                             const dayTasks = tasks[dateString] || {};
 
-                            // Get staff on shift for this day
-                            const shiftStaff = schedule && schedule[dateString] ? schedule[dateString] : [];
+                            // Get staff on shift for this day (sorted by seniority)
+                            const shiftStaff = schedule && schedule[dateString] ? [...schedule[dateString]] : [];
+                            shiftStaff.sort((a, b) => b.seniority - a.seniority);
                             const shiftStaff1 = shiftStaff[0];
                             const shiftStaff2 = shiftStaff[1];
 
                             return (
                                 <tr key={dateString} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                                    <td style={{ padding: '8px', fontWeight: '500' }}>{dayName}</td>
+                                    <td style={{ padding: '4px 8px', fontWeight: '500', fontSize: '0.75rem' }}>{dayName}</td>
 
                                     {/* Shift Columns */}
-                                    <td style={{ padding: '8px', color: shiftStaff1 ? getSeniorityColor(shiftStaff1.seniority) : 'inherit', fontWeight: '500' }}>
+                                    <td style={{ padding: '4px 8px', color: shiftStaff1 ? getSeniorityColor(shiftStaff1.seniority) : 'inherit', fontWeight: '500', fontSize: '0.75rem' }}>
                                         {shiftStaff1 ? shiftStaff1.name : '-'}
                                     </td>
-                                    <td style={{ padding: '8px', color: shiftStaff2 ? getSeniorityColor(shiftStaff2.seniority) : 'inherit', fontWeight: '500' }}>
+                                    <td style={{ padding: '4px 8px', color: shiftStaff2 ? getSeniorityColor(shiftStaff2.seniority) : 'inherit', fontWeight: '500', fontSize: '0.75rem' }}>
                                         {shiftStaff2 ? shiftStaff2.name : '-'}
                                     </td>
 
                                     {taskColumns.map((col, idx) => {
-                                        const assignedId = dayTasks[idx];
-                                        const availableStaff = getAvailableStaff(dateString, idx);
+                                        if (hiddenColumns.includes(idx)) return null;
 
-                                        // If currently assigned person is not in available list (e.g. became unavailable later), add them back to option
-                                        // so we can see who it is
-                                        const currentStaff = staffList.find(s => s.id === assignedId);
+                                        const config = constraints.taskColumnConfig?.[idx] || {};
+                                        const maxPerDay = config.maxPerDay || 1;
+                                        const assignedIds = dayTasks[idx];
+                                        const assignedArray = Array.isArray(assignedIds) ? assignedIds : (assignedIds ? [assignedIds] : []);
 
-                                        return (
-                                            <td key={idx} style={{ padding: '4px' }}>
-                                                <select
-                                                    value={assignedId || ""}
-                                                    onChange={(e) => handleTaskChange(dateString, idx, e.target.value)}
-                                                    style={{
-                                                        width: '100%',
-                                                        padding: '6px',
-                                                        borderRadius: '4px',
-                                                        border: '1px solid var(--color-border)',
-                                                        background: '#ffffff', // Force white background
-                                                        color: '#1e293b', // Force dark text
-                                                        fontSize: '0.85rem',
-                                                        fontWeight: '500'
-                                                    }}
-                                                >
-                                                    <option value="" style={{ color: '#94a3b8' }}>- Seçiniz -</option>
-                                                    {currentStaff && !availableStaff.find(s => s.id === currentStaff.id) && (
-                                                        <option value={currentStaff.id} style={{ color: 'red' }}>
-                                                            {currentStaff.name} (Uygun Değil!)
-                                                        </option>
-                                                    )}
-                                                    {availableStaff.map(s => (
-                                                        <option key={s.id} value={s.id} style={{ color: getSeniorityColor(s.seniority), fontWeight: '600' }}>
-                                                            {s.name}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            </td>
-                                        );
+                                        return Array.from({ length: maxPerDay }).map((_, subIdx) => {
+                                            const assignedId = assignedArray[subIdx];
+                                            const allStaffStatus = getAvailableStaff(dateString, idx, subIdx);
+                                            const freeStaff = allStaffStatus.filter(s => s.status === 'available');
+                                            const busyStaff = allStaffStatus.filter(s => s.status === 'busy');
+
+                                            return (
+                                                <td key={`${idx}-${subIdx}`} style={{ padding: '2px 4px' }}>
+                                                    <select
+                                                        value={assignedId || ""}
+                                                        onChange={(e) => {
+                                                            const newId = e.target.value ? parseInt(e.target.value) : null;
+                                                            setTasks(prev => {
+                                                                const dayTasks = prev[dateString] || {};
+                                                                const currentAssigned = dayTasks[idx];
+                                                                const currentArray = Array.isArray(currentAssigned) ? currentAssigned : (currentAssigned ? [currentAssigned] : []);
+
+                                                                const newArray = [...currentArray];
+                                                                if (newId) {
+                                                                    newArray[subIdx] = newId;
+                                                                } else {
+                                                                    newArray.splice(subIdx, 1);
+                                                                }
+
+                                                                const filtered = newArray.filter(id => id != null);
+
+                                                                return {
+                                                                    ...prev,
+                                                                    [dateString]: {
+                                                                        ...dayTasks,
+                                                                        [idx]: filtered.length > 0 ? filtered : undefined
+                                                                    }
+                                                                };
+                                                            });
+                                                        }}
+                                                        style={{
+                                                            width: '100%',
+                                                            padding: '4px 2px',
+                                                            borderRadius: '4px',
+                                                            border: '1px solid var(--color-border)',
+                                                            background: 'var(--color-bg)',
+                                                            color: 'var(--color-text)',
+                                                            fontSize: '0.7rem',
+                                                            fontWeight: '600',
+                                                            cursor: 'pointer',
+                                                            outline: 'none'
+                                                        }}
+                                                    >
+                                                        <option value="" style={{ background: 'var(--color-surface)', color: 'var(--color-text-muted)' }}>-</option>
+
+                                                        <optgroup label="✅ Müsait Olanlar" style={{ background: 'var(--color-surface)', color: 'var(--color-text-muted)', fontSize: '0.7rem' }}>
+                                                            {freeStaff.map(s => (
+                                                                <option
+                                                                    key={s.id}
+                                                                    value={s.id}
+                                                                    style={{
+                                                                        background: 'var(--color-surface)',
+                                                                        color: getSeniorityColor(s.seniority),
+                                                                        fontWeight: '700'
+                                                                    }}
+                                                                >
+                                                                    {s.name}
+                                                                </option>
+                                                            ))}
+                                                        </optgroup>
+
+                                                        <optgroup label="❌ Meşgul / İzinli" style={{ background: 'var(--color-surface)', color: 'var(--color-text-muted)', fontSize: '0.7rem' }}>
+                                                            {busyStaff.map(s => (
+                                                                <option
+                                                                    key={s.id}
+                                                                    value={s.id}
+                                                                    style={{
+                                                                        background: 'var(--color-surface)',
+                                                                        color: 'var(--color-text-muted)',
+                                                                        fontStyle: 'italic'
+                                                                    }}
+                                                                >
+                                                                    {s.name} ({s.reason})
+                                                                </option>
+                                                            ))}
+                                                        </optgroup>
+                                                    </select>
+                                                </td>
+                                            );
+                                        });
                                     })}
-                                    <td style={{ padding: '8px' }} className="no-print">
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '0.75rem' }}>
-                                            <div>
-                                                <span style={{ color: 'var(--color-text-muted)' }}>Müsait:</span> <b>{stats.totalAvailable}</b>
-                                                <span style={{ margin: '0 4px', color: '#e2e8f0' }}>|</span>
-                                                <span style={{ color: 'var(--color-primary)' }}>Atanan:</span> <b>{stats.assignedCount}</b>
-                                            </div>
-                                            {stats.unassignedNames.length > 0 ? (
-                                                <div style={{ color: '#f59e0b', marginTop: '2px', lineHeight: '1.2' }} title={stats.unassignedNames.join(', ')}>
-                                                    Boşta: {stats.unassignedNames.slice(0, 3).join(', ')}
-                                                    {stats.unassignedNames.length > 3 && ` +${stats.unassignedNames.length - 3}`}
-                                                </div>
-                                            ) : (
-                                                <div style={{ color: '#22c55e' }}>✓ Herkes atandı</div>
-                                            )}
-                                        </div>
-                                    </td>
                                 </tr>
                             );
                         })}
                     </tbody>
                 </table>
+
+                {/* Statistics Panel */}
+                <div style={{ marginTop: '24px', padding: '16px', background: 'var(--color-surface)', borderRadius: '8px' }} className="no-print">
+                    <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem' }}>📊 Görev İstatistikleri</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '8px' }}>
+                        {staffStats.map(stat => (
+                            <div key={stat.name} style={{ padding: '8px', background: 'var(--color-bg)', borderRadius: '6px', fontSize: '0.75rem' }}>
+                                <div style={{ fontWeight: '600', color: getSeniorityColor(stat.seniority), marginBottom: '4px' }}>
+                                    {stat.name}
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                    {taskColumns.map((col, idx) => {
+                                        if (hiddenColumns.includes(idx)) return null;
+                                        return (
+                                            <span key={idx} style={{ color: 'var(--color-text-muted)' }}>
+                                                {col}: <b style={{ color: 'var(--color-primary)' }}>{stat.counts[idx]}</b>
+                                            </span>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Hidden Columns Info */}
+                {hiddenColumns.length > 0 && (
+                    <div style={{ marginTop: '12px', padding: '8px 12px', background: 'var(--color-bg)', borderRadius: '6px', fontSize: '0.75rem' }} className="no-print">
+                        <b>Gizli Sütunlar:</b> {hiddenColumns.map(idx => taskColumns[idx]).join(', ')}
+                        {' '}
+                        <button
+                            onClick={() => {
+                                setHiddenColumns([]);
+                                setConstraints(prev => ({ ...prev, hiddenTaskColumns: [] }));
+                            }}
+                            style={{ marginLeft: '8px', padding: '2px 8px', fontSize: '0.7rem' }}
+                            className="btn btn-ghost"
+                        >
+                            Tümünü Göster
+                        </button>
+                    </div>
+                )}
             </div>
+
+            {/* Configuration Modal */}
+            {configColumnIndex !== null && (
+                <TaskColumnConfig
+                    columnIndex={configColumnIndex}
+                    columnName={taskColumns[configColumnIndex]}
+                    constraints={constraints}
+                    setConstraints={setConstraints}
+                    staffList={staffList}
+                    onClose={() => setConfigColumnIndex(null)}
+                />
+            )}
         </div>
     );
 };

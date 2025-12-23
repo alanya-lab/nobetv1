@@ -1,6 +1,6 @@
 import React from 'react';
 
-const ConstraintsForm = ({ constraints, setConstraints }) => {
+const ConstraintsForm = ({ constraints, setConstraints, tasks, setTasks }) => {
     const handleInputChange = (e) => {
         const { name, value, type } = e.target;
         setConstraints({
@@ -377,8 +377,54 @@ const ConstraintsForm = ({ constraints, setConstraints }) => {
                             <span>{col}</span>
                             <button
                                 onClick={() => {
-                                    const current = constraints.taskColumns || [];
-                                    setConstraints({ ...constraints, taskColumns: current.filter((_, i) => i !== idx) });
+                                    const currentCols = constraints.taskColumns || [];
+                                    const newCols = currentCols.filter((_, i) => i !== idx);
+
+                                    // 1. Cleanup taskColumnConfig
+                                    const newConfig = {};
+                                    Object.keys(constraints.taskColumnConfig || {}).forEach(key => {
+                                        const k = parseInt(key);
+                                        if (k < idx) {
+                                            newConfig[k] = constraints.taskColumnConfig[k];
+                                        } else if (k > idx) {
+                                            newConfig[k - 1] = constraints.taskColumnConfig[k];
+                                        }
+                                    });
+
+                                    // 2. Cleanup hiddenTaskColumns
+                                    const newHidden = (constraints.hiddenTaskColumns || [])
+                                        .filter(i => i !== idx)
+                                        .map(i => i > idx ? i - 1 : i);
+
+                                    setConstraints({
+                                        ...constraints,
+                                        taskColumns: newCols,
+                                        taskColumnConfig: newConfig,
+                                        hiddenTaskColumns: newHidden
+                                    });
+
+                                    // 3. Cleanup tasks data
+                                    if (typeof setTasks === 'function') {
+                                        setTasks(prev => {
+                                            const newTasks = {};
+                                            Object.keys(prev).forEach(date => {
+                                                const dayTasks = prev[date];
+                                                const newDayTasks = {};
+                                                Object.keys(dayTasks).forEach(key => {
+                                                    const k = parseInt(key);
+                                                    if (k < idx) {
+                                                        newDayTasks[k] = dayTasks[k];
+                                                    } else if (k > idx) {
+                                                        newDayTasks[k - 1] = dayTasks[k];
+                                                    }
+                                                });
+                                                if (Object.keys(newDayTasks).length > 0) {
+                                                    newTasks[date] = newDayTasks;
+                                                }
+                                            });
+                                            return newTasks;
+                                        });
+                                    }
                                 }}
                                 style={{
                                     background: 'none',
@@ -392,6 +438,33 @@ const ConstraintsForm = ({ constraints, setConstraints }) => {
                             >
                                 ×
                             </button>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Shift Column Names */}
+            <div style={{ gridColumn: '1 / -1', marginTop: '10px', padding: '16px', backgroundColor: 'var(--color-bg)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+                <h4 style={{ margin: '0 0 12px 0', fontSize: '1rem' }}>🏷️ Nöbetçi Sütun İsimleri</h4>
+                <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: '12px' }}>
+                    Görev dağılımı tablosunda görünecek nöbetçi sütun isimlerini özelleştirin.
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                    {(constraints.shiftColumnNames || ['Nöbetçi 1', 'Nöbetçi 2']).map((name, idx) => (
+                        <div key={idx}>
+                            <label style={{ fontSize: '0.85rem', marginBottom: '4px', display: 'block' }}>
+                                Sütun {idx + 1}
+                            </label>
+                            <input
+                                type="text"
+                                value={name}
+                                onChange={(e) => {
+                                    const newNames = [...(constraints.shiftColumnNames || ['Nöbetçi 1', 'Nöbetçi 2'])];
+                                    newNames[idx] = e.target.value;
+                                    setConstraints({ ...constraints, shiftColumnNames: newNames });
+                                }}
+                                style={{ width: '100%' }}
+                            />
                         </div>
                     ))}
                 </div>

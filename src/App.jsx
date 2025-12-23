@@ -41,7 +41,10 @@ function App() {
 
                 slot2Seniorities: [3, 2, 1]
             },
-            taskColumns: []
+            taskColumns: [],
+            taskColumnConfig: {}, // { columnIndex: { eligibleStaffIds: [], eligibleSeniorities: [], targetWeekdays: [], maxPerDay: 3 } }
+            shiftColumnNames: ['Nöbetçi 1', 'Nöbetçi 2'],
+            hiddenTaskColumns: [] // Array of hidden column indices
         };
 
         if (saved) {
@@ -55,7 +58,10 @@ function App() {
                     dailyNeeds: { ...defaultConstraints.dailyNeeds, ...(parsed.dailyNeeds || {}) },
 
                     slotSystem: { ...defaultConstraints.slotSystem, ...(parsed.slotSystem || {}) },
-                    taskColumns: parsed.taskColumns || []
+                    taskColumns: parsed.taskColumns || [],
+                    taskColumnConfig: parsed.taskColumnConfig || {},
+                    shiftColumnNames: parsed.shiftColumnNames || defaultConstraints.shiftColumnNames,
+                    hiddenTaskColumns: parsed.hiddenTaskColumns || []
                 };
             } catch (e) {
                 console.error("Ayarlar yüklenirken hata oluştu:", e);
@@ -166,7 +172,8 @@ function App() {
 
         { id: 'constraints', label: 'Ayarlar', icon: '⚙️' },
         { id: 'schedule', label: 'Çizelge', icon: '📊' },
-        { id: 'tasks', label: 'Görevler', icon: '📋' }
+        { id: 'tasks', label: 'Görevler', icon: '📋' },
+        { id: 'export', label: 'Dışa Aktar', icon: '💾' }
     ];
 
     return (
@@ -272,7 +279,12 @@ function App() {
                     />
                 )}
                 {activeTab === 'constraints' && (
-                    <ConstraintsForm constraints={constraints} setConstraints={setConstraints} />
+                    <ConstraintsForm
+                        constraints={constraints}
+                        setConstraints={setConstraints}
+                        tasks={tasks}
+                        setTasks={setTasks}
+                    />
                 )}
                 {activeTab === 'schedule' && (
                     <>
@@ -301,22 +313,31 @@ function App() {
                         )}
                         {!schedule && scheduleHistory.length > 0 && (
                             <div style={{ marginTop: '2rem' }}>
-                                <ExportTools
-                                    schedule={null}
-                                    staffList={staffList}
-                                    history={scheduleHistory}
-                                    onLoadHistory={loadScheduleFromHistory}
-                                    onDeleteHistory={deleteScheduleFromHistory}
-                                />
+                                <p style={{ textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                                    Geçmiş çizelgeleri "Dışa Aktar" sekmesinden yönetebilirsiniz.
+                                </p>
                             </div>
                         )}
                     </>
+                )}
+                {activeTab === 'export' && (
+                    <div className="card animate-in">
+                        <h3 style={{ margin: '0 0 20px 0' }}>💾 Veri Yönetimi ve Yedekleme</h3>
+                        <ExportTools
+                            schedule={schedule}
+                            staffList={staffList}
+                            history={scheduleHistory}
+                            onLoadHistory={loadScheduleFromHistory}
+                            onDeleteHistory={deleteScheduleFromHistory}
+                        />
+                    </div>
                 )}
                 {activeTab === 'tasks' && (
                     <TaskDistribution
                         staffList={staffList}
                         schedule={schedule}
                         constraints={constraints}
+                        setConstraints={setConstraints}
                         tasks={tasks}
                         setTasks={setTasks}
                         onSaveToHistory={saveScheduleToHistory}
@@ -332,7 +353,7 @@ function App() {
                 fontSize: '0.8rem'
             }}>
                 <p style={{ margin: 0 }}>
-                    Emre YILDIRIM • {new Date().getFullYear()}
+                    Vardiya Çizelgesi v2.0 • {new Date().getFullYear()}
                 </p>
             </footer>
         </div>
@@ -340,4 +361,3 @@ function App() {
 }
 
 export default App;
-
