@@ -1,6 +1,45 @@
 import { format, getWeek, getDay } from 'date-fns';
 
 /**
+ * Helper: Check if date is a Turkish public holiday
+ */
+const isTurkishHoliday = (date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+
+    // Fixed holidays
+    const fixedHolidays = [
+        { month: 1, day: 1 },   // Yılbaşı
+        { month: 4, day: 23 },  // 23 Nisan
+        { month: 5, day: 1 },   // İşçi Bayramı
+        { month: 5, day: 19 },  // 19 Mayıs
+        { month: 7, day: 15 },  // 15 Temmuz
+        { month: 8, day: 30 },  // 30 Ağustos
+        { month: 10, day: 29 }, // 29 Ekim
+    ];
+
+    // Religious holidays (approximate - these change yearly)
+    const religiousHolidays2024 = [
+        { month: 4, day: 10 }, { month: 4, day: 11 }, { month: 4, day: 12 }, // Ramazan 2024
+        { month: 6, day: 16 }, { month: 6, day: 17 }, { month: 6, day: 18 }, { month: 6, day: 19 }, // Kurban 2024
+    ];
+
+    const religiousHolidays2025 = [
+        { month: 3, day: 30 }, { month: 3, day: 31 }, { month: 4, day: 1 }, // Ramazan 2025
+        { month: 6, day: 6 }, { month: 6, day: 7 }, { month: 6, day: 8 }, { month: 6, day: 9 }, // Kurban 2025
+    ];
+
+    const checkHoliday = (holidays) => holidays.some(h => h.month === month && h.day === day);
+
+    if (checkHoliday(fixedHolidays)) return true;
+    if (year === 2024 && checkHoliday(religiousHolidays2024)) return true;
+    if (year === 2025 && checkHoliday(religiousHolidays2025)) return true;
+
+    return false;
+};
+
+/**
  * Auto-distribute tasks for a specific column based on configuration
  * @param {Object} params
  * @param {Array} params.days - Array of Date objects for the month
@@ -48,8 +87,11 @@ export function distributeTaskColumn({
         return newTasks;
     }
 
-    // Filter days to target weekdays
+    // Filter days to target weekdays and EXCLUDE holidays
     const targetDays = days.filter(day => {
+        // Skip holidays for task distribution
+        if (isTurkishHoliday(day)) return false;
+
         if (targetWeekdays.length === 0) return true;
         const dayOfWeek = getDay(day);
         return targetWeekdays.includes(dayOfWeek);
@@ -196,7 +238,8 @@ function selectStaffForDay(
     preferredSeniorityMix
 ) {
     const selected = [];
-    const candidates = [...availableStaff];
+    // Shuffle candidates first to provide variety when priorities are equal
+    const candidates = [...availableStaff].sort(() => Math.random() - 0.5);
 
     // Sort candidates by priority
     candidates.sort((a, b) => {

@@ -8,6 +8,7 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
     const [hiddenColumns, setHiddenColumns] = useState(constraints.hiddenTaskColumns || []);
     const [showConfigModal, setShowConfigModal] = useState(false);
     const [configColumnIndex, setConfigColumnIndex] = useState(null);
+    const [activeStatsTab, setActiveStatsTab] = useState(0);
 
     // Helper: Get Seniority Color
     const getSeniorityColor = (seniority) => {
@@ -31,6 +32,54 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
 
     const taskColumns = constraints.taskColumns || [];
     const shiftColumnNames = constraints.shiftColumnNames || ['Nöbetçi 1', 'Nöbetçi 2'];
+
+    // Helper: Check if date is a Turkish public holiday
+    const isTurkishHoliday = (date) => {
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1;
+        const day = date.getDate();
+
+        // Fixed holidays
+        const fixedHolidays = [
+            { month: 1, day: 1 },   // Yılbaşı
+            { month: 4, day: 23 },  // 23 Nisan
+            { month: 5, day: 1 },   // İşçi Bayramı
+            { month: 5, day: 19 },  // 19 Mayıs
+            { month: 7, day: 15 },  // 15 Temmuz
+            { month: 8, day: 30 },  // 30 Ağustos
+            { month: 10, day: 29 }, // 29 Ekim
+        ];
+
+        // Religious holidays (approximate - these change yearly)
+        const religiousHolidays2024 = [
+            { month: 4, day: 10 }, { month: 4, day: 11 }, { month: 4, day: 12 }, // Ramazan 2024
+            { month: 6, day: 16 }, { month: 6, day: 17 }, { month: 6, day: 18 }, { month: 6, day: 19 }, // Kurban 2024
+        ];
+
+        const religiousHolidays2025 = [
+            { month: 3, day: 30 }, { month: 3, day: 31 }, { month: 4, day: 1 }, // Ramazan 2025
+            { month: 6, day: 6 }, { month: 6, day: 7 }, { month: 6, day: 8 }, { month: 6, day: 9 }, // Kurban 2025
+        ];
+
+        const checkHoliday = (holidays) => holidays.some(h => h.month === month && h.day === day);
+
+        if (checkHoliday(fixedHolidays)) return true;
+        if (year === 2024 && checkHoliday(religiousHolidays2024)) return true;
+        if (year === 2025 && checkHoliday(religiousHolidays2025)) return true;
+
+        return false;
+    };
+
+    // Helper: Get row background color based on day type
+    const getRowBackgroundColor = (date) => {
+        const dayOfWeek = date.getDay();
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+        const isHoliday = isTurkishHoliday(date);
+
+        if (isHoliday) return 'rgba(239, 68, 68, 0.1)'; // Light red for holidays
+        if (isWeekend) return 'rgba(147, 51, 234, 0.08)'; // Light purple for weekends
+        return 'transparent';
+    };
 
     // Helper: Get available staff for a specific day and task
     const getAvailableStaff = (dateString, currentTaskIndex, currentSubIdx) => {
@@ -133,37 +182,40 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
         setTasks(newTasks);
     };
 
-    // Calculate statistics per staff
-    const calculateStaffStats = () => {
+    // Calculate day-based statistics for a specific column (person x weekday)
+    const calculateColumnDayStats = (columnIndex) => {
         const stats = {};
+
         staffList.forEach(staff => {
-            stats[staff.id] = { name: staff.name, seniority: staff.seniority, counts: {} };
-            taskColumns.forEach((_, idx) => {
-                stats[staff.id].counts[idx] = 0;
-            });
+            stats[staff.id] = {
+                name: staff.name,
+                seniority: staff.seniority,
+                days: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }, // Sunday=0, Monday=1, ..., Saturday=6
+                total: 0
+            };
         });
 
         days.forEach(day => {
             const dateString = format(day, 'yyyy-MM-dd');
             const dayTasks = tasks[dateString] || {};
+            const dayOfWeek = day.getDay();
 
-            taskColumns.forEach((_, idx) => {
-                const assigned = dayTasks[idx];
-                if (assigned) {
-                    const ids = Array.isArray(assigned) ? assigned : [assigned];
-                    ids.forEach(id => {
-                        if (stats[id]) {
-                            stats[id].counts[idx]++;
-                        }
-                    });
-                }
-            });
+            const assigned = dayTasks[columnIndex];
+            if (assigned) {
+                const ids = Array.isArray(assigned) ? assigned : [assigned];
+                ids.forEach(id => {
+                    if (stats[id]) {
+                        stats[id].days[dayOfWeek]++;
+                        stats[id].total++;
+                    }
+                });
+            }
         });
 
         return Object.values(stats).sort((a, b) => b.seniority - a.seniority);
     };
 
-    const staffStats = calculateStaffStats();
+
 
     if (taskColumns.length === 0) {
         return (
@@ -259,7 +311,7 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
                             const shiftStaff2 = shiftStaff[1];
 
                             return (
-                                <tr key={dateString} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                                <tr key={dateString} style={{ borderBottom: '1px solid var(--color-border)', background: getRowBackgroundColor(day) }}>
                                     <td style={{ padding: '4px 8px', fontWeight: '500', fontSize: '0.75rem' }}>{dayName}</td>
 
                                     {/* Shift Columns */}
@@ -370,27 +422,73 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
                     </tbody>
                 </table>
 
-                {/* Statistics Panel */}
+
+                {/* Per-Column Statistics with Tabs */}
                 <div style={{ marginTop: '24px', padding: '16px', background: 'var(--color-surface)', borderRadius: '8px' }} className="no-print">
                     <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem' }}>📊 Görev İstatistikleri</h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '8px' }}>
-                        {staffStats.map(stat => (
-                            <div key={stat.name} style={{ padding: '8px', background: 'var(--color-bg)', borderRadius: '6px', fontSize: '0.75rem' }}>
-                                <div style={{ fontWeight: '600', color: getSeniorityColor(stat.seniority), marginBottom: '4px' }}>
-                                    {stat.name}
-                                </div>
-                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                    {taskColumns.map((col, idx) => {
-                                        if (hiddenColumns.includes(idx)) return null;
-                                        return (
-                                            <span key={idx} style={{ color: 'var(--color-text-muted)' }}>
-                                                {col}: <b style={{ color: 'var(--color-primary)' }}>{stat.counts[idx]}</b>
-                                            </span>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        ))}
+
+                    {/* Tab Navigation */}
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                        {taskColumns.map((col, idx) => {
+                            if (hiddenColumns.includes(idx)) return null;
+                            return (
+                                <button
+                                    key={idx}
+                                    onClick={() => setActiveStatsTab(idx)}
+                                    style={{
+                                        padding: '8px 16px',
+                                        borderRadius: '6px',
+                                        border: activeStatsTab === idx ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
+                                        background: activeStatsTab === idx ? 'var(--color-primary)' : 'var(--color-bg)',
+                                        color: activeStatsTab === idx ? 'white' : 'var(--color-text)',
+                                        cursor: 'pointer',
+                                        fontSize: '0.8rem',
+                                        fontWeight: activeStatsTab === idx ? '700' : '500',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    {col}
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* Statistics Table for Active Column */}
+                    <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
+                            <thead>
+                                <tr style={{ borderBottom: '2px solid var(--color-border)' }}>
+                                    <th style={{ padding: '6px 8px', textAlign: 'left', fontWeight: '600' }}>Personel</th>
+                                    <th style={{ padding: '6px 8px', textAlign: 'center', fontWeight: '600' }}>Pzt</th>
+                                    <th style={{ padding: '6px 8px', textAlign: 'center', fontWeight: '600' }}>Sal</th>
+                                    <th style={{ padding: '6px 8px', textAlign: 'center', fontWeight: '600' }}>Çar</th>
+                                    <th style={{ padding: '6px 8px', textAlign: 'center', fontWeight: '600' }}>Per</th>
+                                    <th style={{ padding: '6px 8px', textAlign: 'center', fontWeight: '600' }}>Cum</th>
+                                    <th style={{ padding: '6px 8px', textAlign: 'center', fontWeight: '600', background: 'rgba(147, 51, 234, 0.1)' }}>Cmt</th>
+                                    <th style={{ padding: '6px 8px', textAlign: 'center', fontWeight: '600', background: 'rgba(147, 51, 234, 0.1)' }}>Paz</th>
+                                    <th style={{ padding: '6px 8px', textAlign: 'center', fontWeight: '700', background: 'var(--color-bg)' }}>Toplam</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {calculateColumnDayStats(activeStatsTab).map(stat => (
+                                    <tr key={stat.name} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                                        <td style={{ padding: '6px 8px', fontWeight: '600', color: getSeniorityColor(stat.seniority) }}>
+                                            {stat.name}
+                                        </td>
+                                        <td style={{ padding: '6px 8px', textAlign: 'center' }}>{stat.days[1] || '-'}</td>
+                                        <td style={{ padding: '6px 8px', textAlign: 'center' }}>{stat.days[2] || '-'}</td>
+                                        <td style={{ padding: '6px 8px', textAlign: 'center' }}>{stat.days[3] || '-'}</td>
+                                        <td style={{ padding: '6px 8px', textAlign: 'center' }}>{stat.days[4] || '-'}</td>
+                                        <td style={{ padding: '6px 8px', textAlign: 'center' }}>{stat.days[5] || '-'}</td>
+                                        <td style={{ padding: '6px 8px', textAlign: 'center', background: 'rgba(147, 51, 234, 0.05)' }}>{stat.days[6] || '-'}</td>
+                                        <td style={{ padding: '6px 8px', textAlign: 'center', background: 'rgba(147, 51, 234, 0.05)' }}>{stat.days[0] || '-'}</td>
+                                        <td style={{ padding: '6px 8px', textAlign: 'center', fontWeight: '700', background: 'var(--color-bg)', color: 'var(--color-primary)' }}>
+                                            {stat.total}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
