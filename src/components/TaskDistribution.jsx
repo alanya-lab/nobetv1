@@ -9,6 +9,9 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
     const [showConfigModal, setShowConfigModal] = useState(false);
     const [configColumnIndex, setConfigColumnIndex] = useState(null);
     const [activeStatsTab, setActiveStatsTab] = useState(0);
+    const [editingCell, setEditingCell] = useState(null); // {dateString, columnIdx, subIdx}
+    const [leaveColumnName, setLeaveColumnName] = useState(constraints.leaveColumnName || 'İzinli');
+    const [editingLeaveColumnName, setEditingLeaveColumnName] = useState(false);
 
     // Helper: Get Seniority Color
     const getSeniorityColor = (seniority) => {
@@ -182,6 +185,20 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
         setTasks(newTasks);
     };
 
+    // Save leave column name to constraints
+    const handleLeaveColumnNameChange = (newName) => {
+        setLeaveColumnName(newName);
+        setConstraints(prev => ({
+            ...prev,
+            leaveColumnName: newName
+        }));
+    };
+
+    // Get staff on leave for a specific day
+    const getLeaveStaff = (dateString) => {
+        return staffList.filter(staff => staff.leaveDays && staff.leaveDays.includes(dateString));
+    };
+
     // Calculate day-based statistics for a specific column (person x weekday)
     const calculateColumnDayStats = (columnIndex) => {
         const stats = {};
@@ -243,12 +260,12 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
             </div>
 
             <div className="print-area">
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                <table style={{ width: 'auto', borderCollapse: 'collapse', fontSize: '0.75rem', tableLayout: 'auto' }}>
                     <thead>
                         <tr style={{ background: 'var(--color-bg)', borderBottom: '2px solid var(--color-border)' }}>
-                            <th style={{ padding: '6px 8px', textAlign: 'left', minWidth: '90px' }}>Tarih</th>
-                            <th style={{ padding: '6px 8px', textAlign: 'left', minWidth: '100px' }}>{shiftColumnNames[0]}</th>
-                            <th style={{ padding: '6px 8px', textAlign: 'left', minWidth: '100px' }}>{shiftColumnNames[1]}</th>
+                            <th style={{ padding: '4px 6px', textAlign: 'left', whiteSpace: 'nowrap' }}>Tarih</th>
+                            <th style={{ padding: '4px 6px', textAlign: 'left', whiteSpace: 'nowrap' }}>{shiftColumnNames[0]}</th>
+                            <th style={{ padding: '4px 6px', textAlign: 'left', whiteSpace: 'nowrap' }}>{shiftColumnNames[1]}</th>
                             {taskColumns.map((col, idx) => {
                                 if (hiddenColumns.includes(idx)) return null;
 
@@ -257,35 +274,35 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
 
                                 // Create sub-columns
                                 return Array.from({ length: maxPerDay }).map((_, subIdx) => (
-                                    <th key={`${idx}-${subIdx}`} style={{ padding: '6px 8px', textAlign: 'left', minWidth: '110px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'space-between' }}>
-                                            <span style={{ fontSize: '0.7rem', whiteSpace: 'nowrap' }}>{col} {maxPerDay > 1 ? (subIdx + 1) : ''}</span>
+                                    <th key={`${idx}-${subIdx}`} style={{ padding: '4px 6px', textAlign: 'left', whiteSpace: 'nowrap' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <span style={{ fontSize: '0.7rem' }}>{col}{maxPerDay > 1 ? ` ${subIdx + 1}` : ''}</span>
                                             {subIdx === 0 && (
-                                                <div className="no-print" style={{ display: 'flex', gap: '4px' }}>
+                                                <div className="no-print" style={{ display: 'flex', gap: '2px' }}>
                                                     <button
                                                         onClick={() => setConfigColumnIndex(idx)}
-                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', padding: '2px' }}
+                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', padding: '1px' }}
                                                         title="Ayarlar"
                                                     >
                                                         ⚙️
                                                     </button>
                                                     <button
                                                         onClick={() => handleAutoDistribute(idx, true)}
-                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', padding: '2px' }}
+                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', padding: '1px' }}
                                                         title="Boşları Doldur"
                                                     >
                                                         ➕
                                                     </button>
                                                     <button
                                                         onClick={() => handleAutoDistribute(idx, false)}
-                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', padding: '2px' }}
+                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', padding: '1px' }}
                                                         title="Sıfırdan Dağıt"
                                                     >
                                                         🔄
                                                     </button>
                                                     <button
                                                         onClick={() => toggleColumnVisibility(idx)}
-                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', padding: '2px' }}
+                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', padding: '1px' }}
                                                         title="Gizle"
                                                     >
                                                         👁️
@@ -296,6 +313,44 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
                                     </th>
                                 ));
                             })}
+                            {/* Leave Column Header */}
+                            <th style={{ padding: '4px 6px', textAlign: 'left', whiteSpace: 'nowrap', background: 'rgba(239, 68, 68, 0.1)' }}>
+                                {editingLeaveColumnName ? (
+                                    <input
+                                        type="text"
+                                        value={leaveColumnName}
+                                        onChange={(e) => setLeaveColumnName(e.target.value)}
+                                        onBlur={() => {
+                                            setEditingLeaveColumnName(false);
+                                            handleLeaveColumnNameChange(leaveColumnName);
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                setEditingLeaveColumnName(false);
+                                                handleLeaveColumnNameChange(leaveColumnName);
+                                            }
+                                        }}
+                                        autoFocus
+                                        style={{
+                                            fontSize: '0.7rem',
+                                            padding: '2px 4px',
+                                            border: '1px solid var(--color-primary)',
+                                            borderRadius: '3px',
+                                            background: 'var(--color-bg)',
+                                            color: 'var(--color-text)',
+                                            width: '80px'
+                                        }}
+                                    />
+                                ) : (
+                                    <span
+                                        onClick={() => setEditingLeaveColumnName(true)}
+                                        style={{ cursor: 'pointer', fontSize: '0.7rem' }}
+                                        title="Sütun adını değiştirmek için tıklayın"
+                                    >
+                                        {leaveColumnName} ✏️
+                                    </span>
+                                )}
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
@@ -336,86 +391,101 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
                                             const freeStaff = allStaffStatus.filter(s => s.status === 'available');
                                             const busyStaff = allStaffStatus.filter(s => s.status === 'busy');
 
+                                            const isEditing = editingCell?.dateString === dateString &&
+                                                editingCell?.columnIdx === idx &&
+                                                editingCell?.subIdx === subIdx;
+
+                                            const assignedStaff = staffList.find(s => s.id === assignedId);
+
                                             return (
-                                                <td key={`${idx}-${subIdx}`} style={{ padding: '2px 4px' }}>
-                                                    <select
-                                                        value={assignedId || ""}
-                                                        onChange={(e) => {
-                                                            const newId = e.target.value ? parseInt(e.target.value) : null;
-                                                            setTasks(prev => {
-                                                                const dayTasks = prev[dateString] || {};
-                                                                const currentAssigned = dayTasks[idx];
-                                                                const currentArray = Array.isArray(currentAssigned) ? currentAssigned : (currentAssigned ? [currentAssigned] : []);
+                                                <td key={`${idx}-${subIdx}`} style={{ padding: '2px 4px', minWidth: '80px' }}>
+                                                    {isEditing ? (
+                                                        <select
+                                                            value={assignedId || ""}
+                                                            autoFocus
+                                                            onBlur={() => setEditingCell(null)}
+                                                            onChange={(e) => {
+                                                                const newId = e.target.value ? parseInt(e.target.value) : null;
+                                                                setTasks(prev => {
+                                                                    const dayTasks = prev[dateString] || {};
+                                                                    const currentAssigned = dayTasks[idx];
+                                                                    const currentArray = Array.isArray(currentAssigned) ? currentAssigned : (currentAssigned ? [currentAssigned] : []);
 
-                                                                const newArray = [...currentArray];
-                                                                if (newId) {
-                                                                    newArray[subIdx] = newId;
-                                                                } else {
-                                                                    newArray.splice(subIdx, 1);
-                                                                }
-
-                                                                const filtered = newArray.filter(id => id != null);
-
-                                                                return {
-                                                                    ...prev,
-                                                                    [dateString]: {
-                                                                        ...dayTasks,
-                                                                        [idx]: filtered.length > 0 ? filtered : undefined
+                                                                    const newArray = [...currentArray];
+                                                                    if (newId) {
+                                                                        newArray[subIdx] = newId;
+                                                                    } else {
+                                                                        newArray.splice(subIdx, 1);
                                                                     }
-                                                                };
-                                                            });
-                                                        }}
-                                                        style={{
-                                                            width: '100%',
-                                                            padding: '4px 2px',
-                                                            borderRadius: '4px',
-                                                            border: '1px solid var(--color-border)',
-                                                            background: 'var(--color-bg)',
-                                                            color: 'var(--color-text)',
-                                                            fontSize: '0.7rem',
-                                                            fontWeight: '600',
-                                                            cursor: 'pointer',
-                                                            outline: 'none'
-                                                        }}
-                                                    >
-                                                        <option value="" style={{ background: 'var(--color-surface)', color: 'var(--color-text-muted)' }}>-</option>
 
-                                                        <optgroup label="✅ Müsait Olanlar" style={{ background: 'var(--color-surface)', color: 'var(--color-text-muted)', fontSize: '0.7rem' }}>
-                                                            {freeStaff.map(s => (
-                                                                <option
-                                                                    key={s.id}
-                                                                    value={s.id}
-                                                                    style={{
-                                                                        background: 'var(--color-surface)',
-                                                                        color: getSeniorityColor(s.seniority),
-                                                                        fontWeight: '700'
-                                                                    }}
-                                                                >
-                                                                    {s.name}
-                                                                </option>
-                                                            ))}
-                                                        </optgroup>
+                                                                    const filtered = newArray.filter(id => id != null);
 
-                                                        <optgroup label="❌ Meşgul / İzinli" style={{ background: 'var(--color-surface)', color: 'var(--color-text-muted)', fontSize: '0.7rem' }}>
-                                                            {busyStaff.map(s => (
-                                                                <option
-                                                                    key={s.id}
-                                                                    value={s.id}
-                                                                    style={{
-                                                                        background: 'var(--color-surface)',
-                                                                        color: 'var(--color-text-muted)',
-                                                                        fontStyle: 'italic'
-                                                                    }}
-                                                                >
-                                                                    {s.name} ({s.reason})
-                                                                </option>
-                                                            ))}
-                                                        </optgroup>
-                                                    </select>
+                                                                    return {
+                                                                        ...prev,
+                                                                        [dateString]: {
+                                                                            ...dayTasks,
+                                                                            [idx]: filtered.length > 0 ? filtered : undefined
+                                                                        }
+                                                                    };
+                                                                });
+                                                                setEditingCell(null);
+                                                            }}
+                                                            style={{
+                                                                width: '100%',
+                                                                padding: '2px',
+                                                                fontSize: '0.7rem',
+                                                                fontWeight: '600',
+                                                                outline: 'none'
+                                                            }}
+                                                        >
+                                                            <option value="">-</option>
+                                                            <optgroup label="✅ Müsait Olanlar">
+                                                                {freeStaff.map(s => (
+                                                                    <option key={s.id} value={s.id} style={{ color: getSeniorityColor(s.seniority) }}>
+                                                                        {s.name}
+                                                                    </option>
+                                                                ))}
+                                                            </optgroup>
+                                                            <optgroup label="❌ Meşgul / İzinli">
+                                                                {busyStaff.map(s => (
+                                                                    <option key={s.id} value={s.id} disabled style={{ fontStyle: 'italic' }}>
+                                                                        {s.name} ({s.reason})
+                                                                    </option>
+                                                                ))}
+                                                            </optgroup>
+                                                        </select>
+                                                    ) : (
+                                                        <div
+                                                            onClick={() => setEditingCell({ dateString, columnIdx: idx, subIdx })}
+                                                            style={{
+                                                                cursor: 'pointer',
+                                                                padding: '2px 4px',
+                                                                fontSize: '0.7rem',
+                                                                fontWeight: assignedStaff ? '600' : '400',
+                                                                color: assignedStaff ? getSeniorityColor(assignedStaff.seniority) : 'var(--color-text-muted)',
+                                                                minHeight: '20px',
+                                                                display: 'flex',
+                                                                alignItems: 'center'
+                                                            }}
+                                                        >
+                                                            {assignedStaff ? assignedStaff.name : '-'}
+                                                        </div>
+                                                    )}
                                                 </td>
                                             );
                                         });
                                     })}
+
+                                    {/* Leave Column */}
+                                    <td style={{
+                                        padding: '2px 6px',
+                                        background: 'rgba(239, 68, 68, 0.05)',
+                                        fontSize: '0.7rem',
+                                        color: 'var(--color-text-muted)',
+                                        whiteSpace: 'nowrap'
+                                    }}>
+                                        {getLeaveStaff(dateString).map(s => s.name).join(', ') || '-'}
+                                    </td>
                                 </tr>
                             );
                         })}
