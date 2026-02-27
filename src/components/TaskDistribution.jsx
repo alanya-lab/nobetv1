@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, subDays } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { distributeTaskColumn } from '../utils/taskDistributionAlgorithm';
@@ -12,6 +12,59 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
     const [editingCell, setEditingCell] = useState(null); // {dateString, columnIdx, subIdx}
     const [leaveColumnName, setLeaveColumnName] = useState(constraints.leaveColumnName || 'İzinli');
     const [editingLeaveColumnName, setEditingLeaveColumnName] = useState(false);
+    const [draggedColumnIdx, setDraggedColumnIdx] = useState(null);
+    const touchTargetRef = useRef(null);
+
+    const handleColumnReorder = (fromIdx, toIdx) => {
+        if (fromIdx === toIdx) return;
+
+        const newCols = [...taskColumns];
+        const [movedCol] = newCols.splice(fromIdx, 1);
+        newCols.splice(toIdx, 0, movedCol);
+
+        // Reorder config
+        const newConfig = {};
+        const oldConfig = constraints.taskColumnConfig || {};
+
+        const oldToNewMap = {};
+        for (let i = 0; i < taskColumns.length; i++) {
+            if (i === fromIdx) oldToNewMap[i] = toIdx;
+            else if (fromIdx < toIdx && i > fromIdx && i <= toIdx) oldToNewMap[i] = i - 1;
+            else if (fromIdx > toIdx && i >= toIdx && i < fromIdx) oldToNewMap[i] = i + 1;
+            else oldToNewMap[i] = i;
+        }
+
+        Object.keys(oldConfig).forEach(k => {
+            const oldK = parseInt(k);
+            if (oldToNewMap[oldK] !== undefined) {
+                newConfig[oldToNewMap[oldK]] = oldConfig[oldK];
+            }
+        });
+
+        // Reorder hidden
+        const newHidden = hiddenColumns.map(oldK => oldToNewMap[oldK]).filter(k => k !== undefined);
+        setHiddenColumns(newHidden);
+
+        // Reorder tasks
+        const newTasks = {};
+        Object.keys(tasks).forEach(date => {
+            newTasks[date] = {};
+            Object.keys(tasks[date]).forEach(k => {
+                const oldK = parseInt(k);
+                if (oldToNewMap[oldK] !== undefined) {
+                    newTasks[date][oldToNewMap[oldK]] = tasks[date][oldK];
+                }
+            });
+        });
+
+        setTasks(newTasks);
+        setConstraints(prev => ({
+            ...prev,
+            taskColumns: newCols,
+            taskColumnConfig: newConfig,
+            hiddenTaskColumns: newHidden
+        }));
+    };
 
     // Helper: Get Seniority Color
     const getSeniorityColor = (seniority) => {
@@ -35,6 +88,18 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
 
     const taskColumns = constraints.taskColumns || [];
     const shiftColumnNames = constraints.shiftColumnNames || ['Nöbetçi 1', 'Nöbetçi 2'];
+
+    // Find max assigned staff for any day in the current schedule
+    let maxAssigned = 2; // Default to 2
+    if (schedule && days.length > 0) {
+        maxAssigned = Math.max(
+            ...days.map(day => {
+                const dateString = format(day, 'yyyy-MM-dd');
+                return schedule[dateString]?.length || 0;
+            })
+        );
+        if (maxAssigned < 2) maxAssigned = 2; // Always show at least 2 columns
+    }
 
     // Helper: Check if date is a Turkish public holiday
     const isTurkishHoliday = (date) => {
@@ -264,8 +329,11 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
                     <thead>
                         <tr style={{ background: 'var(--color-bg)', borderBottom: '2px solid var(--color-border)' }}>
                             <th style={{ padding: '4px 6px', textAlign: 'left', whiteSpace: 'nowrap' }}>Tarih</th>
-                            <th style={{ padding: '4px 6px', textAlign: 'left', whiteSpace: 'nowrap' }}>{shiftColumnNames[0]}</th>
-                            <th style={{ padding: '4px 6px', textAlign: 'left', whiteSpace: 'nowrap' }}>{shiftColumnNames[1]}</th>
+                            {Array.from({ length: maxAssigned }).map((_, i) => (
+                                <th key={`shift-col-${i}`} style={{ padding: '4px 6px', textAlign: 'left', whiteSpace: 'nowrap' }}>
+                                    {shiftColumnNames[i] || `Nöbetçi ${i + 1}`}
+                                </th>
+                            ))}
                             {taskColumns.map((col, idx) => {
                                 if (hiddenColumns.includes(idx)) return null;
 
@@ -274,8 +342,64 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
 
                                 // Create sub-columns
                                 return Array.from({ length: maxPerDay }).map((_, subIdx) => (
-                                    <th key={`${idx}-${subIdx}`} style={{ padding: '4px 6px', textAlign: 'left', whiteSpace: 'nowrap' }}>
+                                    <th
+                                        key={`${idx}-${subIdx}`}
+                                        style={{
+                                            padding: '4px 6px', textAlign: 'left', whiteSpace: 'nowrap',
+                                            cursor: subIdx === 0 ? 'grab' : 'default',
+                                            opacity: draggedColumnIdx === idx ? 0.5 : 1,
+                                            userSelect: 'none'
+                                        }}
+                                        draggable={subIdx === 0}
+                                        onDragStart={(e) => {
+                                            if (subIdx === 0) setDraggedColumnIdx(idx);
+                                        }}
+                                        onDragOver={(e) => {
+                                            if (subIdx === 0) e.preventDefault();
+                                        }}
+                                        onDrop={(e) => {
+                                            e.preventDefault();
+                                            if (subIdx === 0 && draggedColumnIdx !== null && draggedColumnIdx !== idx) {
+                                                handleColumnReorder(draggedColumnIdx, idx);
+                                            }
+                                            setDraggedColumnIdx(null);
+                                        }}
+                                        onDragEnd={() => setDraggedColumnIdx(null)}
+                                        onTouchStart={(e) => {
+                                            if (subIdx === 0) {
+                                                setDraggedColumnIdx(idx);
+                                                touchTargetRef.current = null;
+                                                e.currentTarget.style.opacity = '0.5';
+                                            }
+                                        }}
+                                        onTouchMove={(e) => {
+                                            if (draggedColumnIdx === null) return;
+                                            if (subIdx === 0) e.preventDefault();
+
+                                            const touch = e.touches[0];
+                                            const el = document.elementFromPoint(touch.clientX, touch.clientY);
+                                            if (el) {
+                                                const th = el.closest('th');
+                                                if (th) {
+                                                    const targetIdx = th.getAttribute('data-colidx');
+                                                    if (targetIdx !== null && targetIdx !== String(draggedColumnIdx)) {
+                                                        touchTargetRef.current = parseInt(targetIdx);
+                                                    }
+                                                }
+                                            }
+                                        }}
+                                        onTouchEnd={(e) => {
+                                            if (draggedColumnIdx !== null && touchTargetRef.current !== null && draggedColumnIdx !== touchTargetRef.current) {
+                                                handleColumnReorder(draggedColumnIdx, touchTargetRef.current);
+                                            }
+                                            e.currentTarget.style.opacity = '1';
+                                            setDraggedColumnIdx(null);
+                                            touchTargetRef.current = null;
+                                        }}
+                                        data-colidx={idx}
+                                    >
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            {subIdx === 0 && <span style={{ color: 'var(--color-primary)', marginRight: '2px', cursor: 'grab' }}>⋮⋮</span>}
                                             <span style={{ fontSize: '0.7rem' }}>{col}{maxPerDay > 1 ? ` ${subIdx + 1}` : ''}</span>
                                             {subIdx === 0 && (
                                                 <div className="no-print" style={{ display: 'flex', gap: '2px' }}>
@@ -362,20 +486,20 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
                             // Get staff on shift for this day (sorted by seniority)
                             const shiftStaff = schedule && schedule[dateString] ? [...schedule[dateString]] : [];
                             shiftStaff.sort((a, b) => b.seniority - a.seniority);
-                            const shiftStaff1 = shiftStaff[0];
-                            const shiftStaff2 = shiftStaff[1];
 
                             return (
                                 <tr key={dateString} style={{ borderBottom: '1px solid var(--color-border)', background: getRowBackgroundColor(day) }}>
                                     <td style={{ padding: '4px 8px', fontWeight: '500', fontSize: '0.75rem' }}>{dayName}</td>
 
                                     {/* Shift Columns */}
-                                    <td style={{ padding: '4px 8px', color: shiftStaff1 ? getSeniorityColor(shiftStaff1.seniority) : 'inherit', fontWeight: '500', fontSize: '0.75rem' }}>
-                                        {shiftStaff1 ? shiftStaff1.name : '-'}
-                                    </td>
-                                    <td style={{ padding: '4px 8px', color: shiftStaff2 ? getSeniorityColor(shiftStaff2.seniority) : 'inherit', fontWeight: '500', fontSize: '0.75rem' }}>
-                                        {shiftStaff2 ? shiftStaff2.name : '-'}
-                                    </td>
+                                    {Array.from({ length: maxAssigned }).map((_, i) => {
+                                        const staffMember = shiftStaff[i];
+                                        return (
+                                            <td key={`shift-cell-${dateString}-${i}`} style={{ padding: '4px 8px', color: staffMember ? getSeniorityColor(staffMember.seniority) : 'inherit', fontWeight: '500', fontSize: '0.75rem' }}>
+                                                {staffMember ? staffMember.name : '-'}
+                                            </td>
+                                        );
+                                    })}
 
                                     {taskColumns.map((col, idx) => {
                                         if (hiddenColumns.includes(idx)) return null;
@@ -564,19 +688,28 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
 
                 {/* Hidden Columns Info */}
                 {hiddenColumns.length > 0 && (
-                    <div style={{ marginTop: '12px', padding: '8px 12px', background: 'var(--color-bg)', borderRadius: '6px', fontSize: '0.75rem' }} className="no-print">
-                        <b>Gizli Sütunlar:</b> {hiddenColumns.map(idx => taskColumns[idx]).join(', ')}
-                        {' '}
-                        <button
-                            onClick={() => {
-                                setHiddenColumns([]);
-                                setConstraints(prev => ({ ...prev, hiddenTaskColumns: [] }));
-                            }}
-                            style={{ marginLeft: '8px', padding: '2px 8px', fontSize: '0.7rem' }}
-                            className="btn btn-ghost"
-                        >
-                            Tümünü Göster
-                        </button>
+                    <div style={{ marginTop: '12px', padding: '12px', background: 'var(--color-bg)', borderRadius: '6px', fontSize: '0.8rem' }} className="no-print">
+                        <div style={{ fontWeight: '600', marginBottom: '8px' }}>👁️ Gizli Sütunlar:</div>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            {hiddenColumns.map(idx => (
+                                <div key={idx} style={{
+                                    display: 'flex', alignItems: 'center', gap: '6px',
+                                    padding: '4px 8px', background: 'var(--color-surface)',
+                                    border: '1px solid var(--color-border)', borderRadius: '4px'
+                                }}>
+                                    <span>{taskColumns[idx]}</span>
+                                    <button
+                                        onClick={() => toggleColumnVisibility(idx)}
+                                        style={{
+                                            background: 'none', border: 'none', cursor: 'pointer',
+                                            color: 'var(--color-primary)', fontSize: '0.75rem', fontWeight: '600', padding: 0
+                                        }}
+                                    >
+                                        [+ Göster]
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>

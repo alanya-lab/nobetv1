@@ -5,8 +5,6 @@ import { tr } from 'date-fns/locale';
 const ExportTools = ({ schedule, staffList, history, onLoadHistory, onDeleteHistory, tasks, constraints }) => {
     const [copied, setCopied] = useState(false);
 
-    if (!schedule && (!history || history.length === 0)) return null;
-
     const generateTableData = () => {
         if (!schedule) return { rows: [], monthTitle: '' };
         const firstDate = Object.keys(schedule).filter(k => !k.startsWith('_'))[0];
@@ -32,8 +30,9 @@ const ExportTools = ({ schedule, staffList, history, onLoadHistory, onDeleteHist
 
         // Header - separate column for each shift position
         const header = ['Tarih', 'Gün'];
+        const shiftColumnNames = constraints?.shiftColumnNames || ['Nöbetçi 1', 'Nöbetçi 2'];
         for (let i = 1; i <= maxAssigned; i++) {
-            header.push(`Nöbetçi ${i}`);
+            header.push(shiftColumnNames[i - 1] || `Nöbetçi ${i}`);
         }
 
         // Add Task Columns to Header

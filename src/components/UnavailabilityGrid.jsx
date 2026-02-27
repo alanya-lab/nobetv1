@@ -99,6 +99,25 @@ const UnavailabilityGrid = ({ staffList, setStaffList, selectedMonth }) => {
                         {monthTitle}
                     </div>
                 </div>
+                <button
+                    onClick={() => {
+                        if (window.confirm(`${monthTitle} için tüm müsaitlik/izin verilerini sıfırlamak istediğinize emin misiniz?`)) {
+                            setStaffList(prevList => prevList.map(staff => {
+                                const validDays = days.map(d => format(d, 'yyyy-MM-dd'));
+                                return {
+                                    ...staff,
+                                    unavailability: (staff.unavailability || []).filter(d => !validDays.includes(d)),
+                                    leaveDays: (staff.leaveDays || []).filter(d => !validDays.includes(d)),
+                                    requiredDays: (staff.requiredDays || []).filter(d => !validDays.includes(d))
+                                };
+                            }));
+                        }
+                    }}
+                    className="btn btn-ghost"
+                    style={{ fontSize: '0.85rem', color: '#ef4444', padding: '6px 12px' }}
+                >
+                    🗑️ Aktif Ayı Sıfırla
+                </button>
             </div>
 
             {/* Selection Mode Toggle - 3 BUTTONS */}
