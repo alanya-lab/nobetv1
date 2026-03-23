@@ -96,25 +96,25 @@ const StaffManager = ({ staffList, setStaffList }) => {
     // 10-step Red-Violet Gradient (Infrared Style)
     const getSeniorityColor = (seniority) => {
         const colors = {
-            1: { bg: 'rgba(239, 68, 68, 0.2)', border: '#ef4444', text: '#fca5a5' }, // Red
-            2: { bg: 'rgba(249, 115, 22, 0.2)', border: '#f97316', text: '#fdba74' }, // Orange
-            3: { bg: 'rgba(245, 158, 11, 0.2)', border: '#f59e0b', text: '#fcd34d' }, // Amber
-            4: { bg: 'rgba(234, 179, 8, 0.2)', border: '#eab308', text: '#fde047' }, // Yellow
-            5: { bg: 'rgba(132, 204, 22, 0.2)', border: '#84cc16', text: '#bef264' }, // Lime
-            6: { bg: 'rgba(34, 197, 94, 0.2)', border: '#22c55e', text: '#86efac' }, // Green
-            7: { bg: 'rgba(6, 182, 212, 0.2)', border: '#06b6d4', text: '#67e8f9' }, // Cyan
-            8: { bg: 'rgba(59, 130, 246, 0.2)', border: '#3b82f6', text: '#93c5fd' }, // Blue
-            9: { bg: 'rgba(99, 102, 241, 0.2)', border: '#6366f1', text: '#a5b4fc' }, // Indigo
-            10: { bg: 'rgba(139, 92, 246, 0.2)', border: '#8b5cf6', text: '#c4b5fd' } // Violet
+            1: { bg: 'rgba(239, 68, 68, 0.15)', border: '#ef4444', text: '#fca5a5' },
+            2: { bg: 'rgba(249, 115, 22, 0.15)', border: '#f97316', text: '#fdba74' },
+            3: { bg: 'rgba(245, 158, 11, 0.15)', border: '#f59e0b', text: '#fcd34d' },
+            4: { bg: 'rgba(234, 179, 8, 0.15)', border: '#eab308', text: '#fde047' },
+            5: { bg: 'rgba(132, 204, 22, 0.15)', border: '#84cc16', text: '#bef264' },
+            6: { bg: 'rgba(34, 197, 94, 0.15)', border: '#22c55e', text: '#86efac' },
+            7: { bg: 'rgba(6, 182, 212, 0.15)', border: '#06b6d4', text: '#67e8f9' },
+            8: { bg: 'rgba(59, 130, 246, 0.15)', border: '#3b82f6', text: '#93c5fd' },
+            9: { bg: 'rgba(99, 102, 241, 0.15)', border: '#6366f1', text: '#a5b4fc' },
+            10: { bg: 'rgba(139, 92, 246, 0.15)', border: '#8b5cf6', text: '#c4b5fd' }
         };
         return colors[seniority] || colors[10];
     };
 
     return (
         <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
-                <h3 style={{ margin: 0 }}>👥 Personel Listesi <span style={{ color: 'var(--color-text-muted)', fontWeight: 'normal' }}>({staffList.length})</span></h3>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <div className="toolbar">
+                <h3>👥 Personel Listesi <span style={{ color: 'var(--on-surface-variant)', fontWeight: 'normal', fontSize: '0.9rem' }}>({staffList.length})</span></h3>
+                <div className="toolbar-actions">
                     <button onClick={() => setIsBulkImportOpen(true)} className="btn btn-ghost">
                         📋 Toplu Ekle
                     </button>
@@ -125,83 +125,74 @@ const StaffManager = ({ staffList, setStaffList }) => {
             </div>
 
             {staffList.length === 0 ? (
-                <div className="card" style={{ textAlign: 'center', padding: '60px 20px' }}>
-                    <div style={{ fontSize: '3rem', marginBottom: '16px' }}>👥</div>
-                    <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>
-                        Henüz personel eklenmedi.<br />
-                        <span style={{ fontSize: '0.9rem' }}>"Toplu Ekle" ile liste yapıştırın veya tek tek ekleyin.</span>
-                    </p>
+                <div className="card">
+                    <div className="empty-state">
+                        <div className="empty-state-icon">👥</div>
+                        <p>Henüz personel eklenmedi.<br />
+                            <span style={{ fontSize: '0.85rem' }}>"Toplu Ekle" ile liste yapıştırın veya tek tek ekleyin.</span>
+                        </p>
+                    </div>
                 </div>
             ) : (
                 <div className="card" style={{ overflowX: 'auto' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                        <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem', margin: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                        <p style={{ color: 'var(--on-surface-variant)', fontSize: '0.82rem', margin: 0 }}>
                             Kıdemi kaydırarak hızlıca ayarlayabilirsiniz.
                         </p>
-                        <button onClick={clearAllStaff} className="btn btn-ghost" style={{ color: '#f87171', fontSize: '0.85rem' }}>
+                        <button onClick={clearAllStaff} className="btn btn-ghost btn-sm" style={{ color: 'var(--error)' }}>
                             🗑️ Tümünü Sil
                         </button>
                     </div>
-                    <table style={{ width: '100%', minWidth: '500px' }}>
+                    <table className="data-table" style={{ minWidth: '500px' }}>
                         <thead>
                             <tr>
-                                <th style={{ textAlign: 'left', padding: '12px' }}>Ad Soyad</th>
-                                <th style={{ padding: '12px', width: '200px' }}>Kıdem (1-10)</th>
-                                <th style={{ padding: '12px', width: '60px' }}>İşlem</th>
+                                <th>Ad Soyad</th>
+                                <th style={{ width: '200px' }}>Kıdem (1-10)</th>
+                                <th style={{ width: '60px' }}>İşlem</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {staffList.map(staff => (
-                                <tr key={staff.id}>
-                                    <td style={{ padding: '12px', fontWeight: '500' }}>
-                                        {staff.name || `${staff.firstName} ${staff.lastName}`}
-                                    </td>
-                                    <td style={{ padding: '8px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                            <input
-                                                type="range"
-                                                min="1"
-                                                max="10"
-                                                value={staff.seniority}
-                                                onChange={(e) => handleQuickUpdate(staff.id, 'seniority', parseInt(e.target.value, 10))}
-                                                style={{ flex: 1 }}
-                                            />
-                                            <span style={{
-                                                width: '32px',
-                                                height: '32px',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                borderRadius: '8px',
-                                                fontWeight: '700',
-                                                fontSize: '0.9rem',
-                                                backgroundColor: `${getSeniorityColor(staff.seniority)}bg`,
-                                                color: getSeniorityColor(staff.seniority).text,
-                                                border: `1px solid ${getSeniorityColor(staff.seniority).border}`
-                                            }}>
-                                                {staff.seniority}
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <td style={{ padding: '8px', textAlign: 'center' }}>
-                                        <button
-                                            onClick={() => handleDelete(staff.id)}
-                                            style={{
-                                                background: 'rgba(239, 68, 68, 0.1)',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                fontSize: '1rem',
-                                                padding: '6px 10px',
-                                                borderRadius: '6px',
-                                                color: '#f87171'
-                                            }}
-                                            title="Sil"
-                                        >
-                                            🗑️
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
+                            {staffList.map(staff => {
+                                const colors = getSeniorityColor(staff.seniority);
+                                return (
+                                    <tr key={staff.id}>
+                                        <td style={{ fontWeight: '500' }}>
+                                            {staff.name || `${staff.firstName} ${staff.lastName}`}
+                                        </td>
+                                        <td>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                <input
+                                                    type="range"
+                                                    min="1"
+                                                    max="10"
+                                                    value={staff.seniority}
+                                                    onChange={(e) => handleQuickUpdate(staff.id, 'seniority', parseInt(e.target.value, 10))}
+                                                    style={{ flex: 1 }}
+                                                />
+                                                <span
+                                                    className="seniority-badge"
+                                                    style={{
+                                                        backgroundColor: colors.bg,
+                                                        color: colors.text,
+                                                    }}
+                                                >
+                                                    {staff.seniority}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td style={{ textAlign: 'center' }}>
+                                            <button
+                                                className="icon-btn"
+                                                onClick={() => handleDelete(staff.id)}
+                                                title="Sil"
+                                                style={{ color: 'var(--error)' }}
+                                            >
+                                                🗑️
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
@@ -209,21 +200,9 @@ const StaffManager = ({ staffList, setStaffList }) => {
 
             {/* Single Staff Modal */}
             {isModalOpen && (
-                <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: 'rgba(0,0,0,0.7)',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    zIndex: 1000,
-                    padding: '20px'
-                }}>
-                    <div className="card" style={{ width: '100%', maxWidth: '450px', margin: 0 }}>
-                        <h3 style={{ marginTop: 0 }}>{isEditing ? '✏️ Personel Düzenle' : '+ Yeni Personel'}</h3>
+                <div className="modal-overlay" onClick={closeModal}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()}>
+                        <h3 style={{ marginBottom: '20px' }}>{isEditing ? '✏️ Personel Düzenle' : '+ Yeni Personel'}</h3>
                         <form onSubmit={handleSubmit}>
                             <div style={{ marginBottom: '16px' }}>
                                 <label>Ad Soyad</label>
@@ -251,7 +230,7 @@ const StaffManager = ({ staffList, setStaffList }) => {
                                     value={formData.seniority}
                                     onChange={handleRangeChange}
                                 />
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--on-surface-variant)' }}>
                                     <span>1 (En çok nöbet)</span>
                                     <span>10 (En az nöbet)</span>
                                 </div>
@@ -272,22 +251,10 @@ const StaffManager = ({ staffList, setStaffList }) => {
 
             {/* Bulk Import Modal */}
             {isBulkImportOpen && (
-                <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: 'rgba(0,0,0,0.7)',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    zIndex: 1000,
-                    padding: '20px'
-                }}>
-                    <div className="card" style={{ width: '100%', maxWidth: '550px', margin: 0 }}>
-                        <h3 style={{ marginTop: 0 }}>📋 Toplu Personel Ekle</h3>
-                        <p style={{ color: 'var(--color-text-muted)', marginBottom: '16px', fontSize: '0.9rem' }}>
+                <div className="modal-overlay" onClick={() => { setIsBulkImportOpen(false); setBulkText(''); }}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '550px' }}>
+                        <h3 style={{ marginBottom: '8px' }}>📋 Toplu Personel Ekle</h3>
+                        <p style={{ color: 'var(--on-surface-variant)', marginBottom: '16px', fontSize: '0.85rem' }}>
                             Her satıra bir isim yazın veya Excel'den yapıştırın.
                         </p>
 
@@ -295,22 +262,11 @@ const StaffManager = ({ staffList, setStaffList }) => {
                             value={bulkText}
                             onChange={(e) => setBulkText(e.target.value)}
                             placeholder={`Emre Yıldırım\nMert Koç\nYılkı Sönmez\n...`}
-                            style={{
-                                width: '100%',
-                                minHeight: '180px',
-                                resize: 'vertical'
-                            }}
+                            style={{ minHeight: '180px', resize: 'vertical' }}
                             autoFocus
                         />
 
-                        <div style={{
-                            padding: '12px',
-                            borderRadius: '8px',
-                            marginTop: '12px',
-                            fontSize: '0.85rem',
-                            backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                            color: 'var(--color-text-muted)'
-                        }}>
+                        <div className="hint-bar" style={{ marginTop: '12px', marginBottom: 0 }}>
                             💡 Varsayılan kıdem: 5. Tabloda hızlıca düzenleyebilirsiniz.
                         </div>
 

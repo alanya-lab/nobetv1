@@ -16,7 +16,6 @@ const ExportTools = ({ schedule, staffList, history, onLoadHistory, onDeleteHist
         const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
         const monthTitle = format(selectedDate, 'MMMM yyyy', { locale: tr });
 
-        // Find max number of people assigned to any day
         let maxAssigned = 2;
         days.forEach(day => {
             const dateString = format(day, 'yyyy-MM-dd');
@@ -27,18 +26,14 @@ const ExportTools = ({ schedule, staffList, history, onLoadHistory, onDeleteHist
         });
 
         const rows = [];
-
-        // Header - separate column for each shift position
         const header = ['Tarih', 'Gün'];
         const shiftColumnNames = constraints?.shiftColumnNames || ['Nöbetçi 1', 'Nöbetçi 2'];
         for (let i = 1; i <= maxAssigned; i++) {
             header.push(shiftColumnNames[i - 1] || `Nöbetçi ${i}`);
         }
 
-        // Add Task Columns to Header
         const taskColumns = constraints?.taskColumns || [];
         taskColumns.forEach(col => header.push(col));
-
         rows.push(header);
 
         days.forEach(day => {
@@ -56,7 +51,6 @@ const ExportTools = ({ schedule, staffList, history, onLoadHistory, onDeleteHist
                 }
             }
 
-            // Add Task Assignments
             const dayTasks = tasks ? (tasks[dateString] || {}) : {};
             taskColumns.forEach((_, idx) => {
                 const staffId = dayTasks[idx];
@@ -76,10 +70,8 @@ const ExportTools = ({ schedule, staffList, history, onLoadHistory, onDeleteHist
 
     const copyAsTable = () => {
         const { rows, monthTitle } = generateTableData();
-
         let text = `Vardiya Çizelgesi - ${monthTitle}\n\n`;
         text += rows.map(row => row.join('\t')).join('\n');
-
         navigator.clipboard.writeText(text).then(() => {
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
@@ -88,9 +80,7 @@ const ExportTools = ({ schedule, staffList, history, onLoadHistory, onDeleteHist
 
     const downloadAsExcel = () => {
         const { rows, monthTitle } = generateTableData();
-
-        // Create CSV content (Excel compatible)
-        const BOM = '\uFEFF'; // For Turkish characters
+        const BOM = '\uFEFF';
         let csv = BOM;
         csv += `Vardiya Çizelgesi - ${monthTitle}\n\n`;
         csv += rows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
@@ -157,12 +147,12 @@ const ExportTools = ({ schedule, staffList, history, onLoadHistory, onDeleteHist
     };
 
     return (
-        <div className="card">
-            <h3 style={{ margin: '0 0 16px 0' }}>📥 Dışa Aktar</h3>
+        <div>
+            <h3 style={{ marginBottom: '16px' }}>📥 Dışa Aktar</h3>
 
             {schedule ? (
                 <>
-                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         <button onClick={copyAsTable} className="btn btn-ghost">
                             {copied ? '✓ Kopyalandı!' : '📋 Panoya Kopyala'}
                         </button>
@@ -170,54 +160,30 @@ const ExportTools = ({ schedule, staffList, history, onLoadHistory, onDeleteHist
                             📊 Excel/CSV İndir
                         </button>
                     </div>
-
-                    <p style={{
-                        marginTop: '12px',
-                        marginBottom: 0,
-                        fontSize: '0.8rem',
-                        color: 'var(--color-text-muted)'
-                    }}>
+                    <div className="hint-bar" style={{ marginTop: '12px' }}>
                         💡 Panoya kopyalayıp Google Sheets veya Excel'e yapıştırabilirsiniz.
-                    </p>
+                    </div>
                 </>
             ) : (
-                <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
+                <p style={{ color: 'var(--on-surface-variant)', fontSize: '0.85rem' }}>
                     Dışa aktarmak için önce bir çizelge oluşturun veya geçmişten yükleyin.
                 </p>
             )}
 
             {history && history.length > 0 && (
-                <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid var(--color-border)' }}>
-                    <h3 style={{ margin: '0 0 16px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        📂 Oluşturulan Listeler
-                    </h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ marginTop: '24px' }}>
+                    <h3 style={{ marginBottom: '12px' }}>📂 Oluşturulan Listeler</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         {history.map(item => (
-                            <div key={item.id} style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                padding: '10px 12px',
-                                background: 'var(--color-bg)',
-                                borderRadius: '8px',
-                                border: '1px solid var(--color-border)'
-                            }}>
-                                <div style={{ fontSize: '0.9rem', fontWeight: '500' }}>
+                            <div key={item.id} className="history-item">
+                                <div style={{ fontSize: '0.85rem', fontWeight: '500' }}>
                                     {item.name}
                                 </div>
-                                <div style={{ display: 'flex', gap: '8px' }}>
-                                    <button
-                                        onClick={() => onLoadHistory(item)}
-                                        className="btn btn-ghost"
-                                        style={{ padding: '4px 12px', fontSize: '0.8rem' }}
-                                    >
+                                <div style={{ display: 'flex', gap: '6px' }}>
+                                    <button onClick={() => onLoadHistory(item)} className="btn btn-ghost btn-sm">
                                         📖 Aç
                                     </button>
-                                    <button
-                                        onClick={() => onDeleteHistory(item.id)}
-                                        className="btn btn-ghost"
-                                        style={{ padding: '4px 12px', fontSize: '0.8rem', color: '#fca5a5' }}
-                                    >
+                                    <button onClick={() => onDeleteHistory(item.id)} className="btn btn-ghost btn-sm" style={{ color: 'var(--error)' }}>
                                         🗑️ Sil
                                     </button>
                                 </div>
@@ -228,15 +194,14 @@ const ExportTools = ({ schedule, staffList, history, onLoadHistory, onDeleteHist
             )}
 
             {/* Backup Section */}
-            <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid var(--color-border)' }}>
-                <h3 style={{ margin: '0 0 16px 0' }}>💾 Veri Yedekleme</h3>
-                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
-                    <button onClick={handleBackupDownload} className="btn btn-primary" style={{ background: 'var(--color-surface-hover)', border: '1px solid var(--color-border)' }}>
+            <div style={{ marginTop: '24px' }}>
+                <h3 style={{ marginBottom: '12px' }}>💾 Veri Yedekleme</h3>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <button onClick={handleBackupDownload} className="btn btn-secondary">
                         ⬇️ Yedeği İndir
                     </button>
-
                     <div style={{ position: 'relative', overflow: 'hidden', display: 'inline-block' }}>
-                        <button className="btn btn-secondary">
+                        <button className="btn btn-ghost">
                             ⬆️ Yedeği Yükle
                         </button>
                         <input
@@ -255,7 +220,7 @@ const ExportTools = ({ schedule, staffList, history, onLoadHistory, onDeleteHist
                         />
                     </div>
                 </div>
-                <p style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem', marginTop: '8px' }}>
+                <p style={{ color: 'var(--on-surface-variant)', fontSize: '0.78rem', marginTop: '8px' }}>
                     Tüm verilerinizi (personel, ayarlar, geçmiş) bilgisayarınıza indirip saklayabilir, daha sonra geri yükleyebilirsiniz.
                 </p>
             </div>

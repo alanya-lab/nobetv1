@@ -42,19 +42,17 @@ function App() {
                 slot2Seniorities: [3, 2, 1]
             },
             taskColumns: [],
-            taskColumnConfig: {}, // { columnIndex: { eligibleStaffIds: [], eligibleSeniorities: [], targetWeekdays: [], maxPerDay: 3 } }
+            taskColumnConfig: {},
             shiftColumnNames: ['Nöbetçi 1', 'Nöbetçi 2'],
-            hiddenTaskColumns: [] // Array of hidden column indices
+            hiddenTaskColumns: []
         };
 
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
-                // Merge saved data with defaults to ensure new fields (like selectedMonth) are present
                 return {
                     ...defaultConstraints,
                     ...parsed,
-                    // Ensure nested objects are also merged correctly
                     dailyNeeds: { ...defaultConstraints.dailyNeeds, ...(parsed.dailyNeeds || {}) },
 
                     slotSystem: { ...defaultConstraints.slotSystem, ...(parsed.slotSystem || {}) },
@@ -169,193 +167,141 @@ function App() {
     const tabs = [
         { id: 'staff', label: 'Personel', icon: '👥' },
         { id: 'unavailability', label: 'Müsaitlik', icon: '📅' },
-
         { id: 'constraints', label: 'Ayarlar', icon: '⚙️' },
         { id: 'schedule', label: 'Çizelge', icon: '📊' },
         { id: 'tasks', label: 'Görevler', icon: '📋' },
         { id: 'export', label: 'Dışa Aktar', icon: '💾' }
     ];
 
-    return (
-        <div className="container">
-            {/* Header */}
-            <header style={{
-                marginBottom: '2rem',
-                textAlign: 'center',
-                paddingTop: '1rem'
-            }}>
-                <div style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    marginBottom: '8px'
-                }}>
-                    <div style={{
-                        width: '48px',
-                        height: '48px',
-                        background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                        borderRadius: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '1.5rem',
-                        boxShadow: '0 4px 15px rgba(99, 102, 241, 0.4)'
-                    }}>
-                        📋
-                    </div>
-                    <h1 style={{
-                        margin: 0,
-                        fontSize: '1.75rem',
-                        background: 'linear-gradient(135deg, #f1f5f9 0%, #94a3b8 100%)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        backgroundClip: 'text'
-                    }}>
-                        Vardiya Çizelgesi
-                    </h1>
-                </div>
-                <p style={{
-                    color: 'var(--color-text-muted)',
-                    marginBottom: '1.5rem',
-                    fontSize: '0.9rem'
-                }}>
-                    Kıdeme göre otomatik nöbet dağılımı
-                </p>
+    const activeTabData = tabs.find(t => t.id === activeTab);
 
-                {/* Navigation */}
-                <nav style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    flexWrap: 'wrap',
-                    background: 'var(--color-surface)',
-                    padding: '6px',
-                    borderRadius: '12px',
-                    border: '1px solid var(--color-border)',
-                    maxWidth: '500px',
-                    margin: '0 auto'
-                }}>
+    return (
+        <div className="app-layout">
+            {/* Sidebar */}
+            <aside className="sidebar">
+                <div className="sidebar-logo">
+                    <div className="sidebar-logo-icon">📋</div>
+                    <div className="sidebar-logo-text">
+                        Vardiya
+                        <span>Çizelge Sistemi</span>
+                    </div>
+                </div>
+
+                <nav className="sidebar-nav">
                     {tabs.map(tab => (
                         <button
                             key={tab.id}
+                            className={`nav-item${activeTab === tab.id ? ' active' : ''}`}
                             onClick={() => setActiveTab(tab.id)}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                padding: '10px 16px',
-                                borderRadius: '8px',
-                                border: 'none',
-                                cursor: 'pointer',
-                                fontSize: '0.9rem',
-                                fontWeight: activeTab === tab.id ? '600' : '500',
-                                background: activeTab === tab.id
-                                    ? 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)'
-                                    : 'transparent',
-                                color: activeTab === tab.id ? 'white' : 'var(--color-text-muted)',
-                                transition: 'all 0.2s ease',
-                                boxShadow: activeTab === tab.id
-                                    ? '0 2px 10px rgba(99, 102, 241, 0.4)'
-                                    : 'none'
-                            }}
                         >
-                            <span>{tab.icon}</span>
+                            <span className="nav-icon">{tab.icon}</span>
                             <span>{tab.label}</span>
                         </button>
                     ))}
                 </nav>
-            </header>
 
-            {/* Main Content */}
-            <main className="animate-in">
-                {activeTab === 'staff' && (
-                    <StaffManager staffList={staffList} setStaffList={setStaffList} />
-                )}
-                {activeTab === 'unavailability' && (
-                    <UnavailabilityGrid
-                        staffList={staffList}
-                        setStaffList={setStaffList}
-                        selectedMonth={constraints.selectedMonth}
-                    />
-                )}
-                {activeTab === 'constraints' && (
-                    <ConstraintsForm
-                        constraints={constraints}
-                        setConstraints={setConstraints}
-                        tasks={tasks}
-                        setTasks={setTasks}
-                    />
-                )}
-                {activeTab === 'schedule' && (
-                    <>
-                        <Scheduler
+                <div className="sidebar-bottom">
+                    {activeTab !== 'schedule' && (
+                        <button
+                            className="sidebar-cta"
+                            onClick={() => setActiveTab('schedule')}
+                        >
+                            <span>📊</span>
+                            <span>Çizelgeye Git</span>
+                        </button>
+                    )}
+                </div>
+            </aside>
+
+            {/* Main Area */}
+            <div className="main-area">
+                <header className="top-bar">
+                    <div className="top-bar-title">
+                        {activeTabData?.icon} {activeTabData?.label}
+                    </div>
+                    <div className="top-bar-actions">
+                        <span style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)' }}>
+                            {staffList.length} personel
+                        </span>
+                    </div>
+                </header>
+
+                <main className="main-content animate-in" key={activeTab}>
+                    {activeTab === 'staff' && (
+                        <StaffManager staffList={staffList} setStaffList={setStaffList} />
+                    )}
+                    {activeTab === 'unavailability' && (
+                        <UnavailabilityGrid
                             staffList={staffList}
-                            constraints={constraints}
-                            schedule={schedule}
-                            setSchedule={setSchedule}
-                            onSaveToHistory={saveScheduleToHistory}
+                            setStaffList={setStaffList}
+                            selectedMonth={constraints.selectedMonth}
                         />
-                        {schedule && (
-                            <>
-                                <Statistics
-                                    staffList={staffList}
-                                    schedule={schedule}
-                                    constraints={constraints}
-                                />
-                                <ExportTools
-                                    schedule={schedule}
-                                    staffList={staffList}
-                                    history={scheduleHistory}
-                                    onLoadHistory={loadScheduleFromHistory}
-                                    onDeleteHistory={deleteScheduleFromHistory}
-                                />
-                            </>
-                        )}
-                        {!schedule && scheduleHistory.length > 0 && (
-                            <div style={{ marginTop: '2rem' }}>
-                                <p style={{ textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                    )}
+                    {activeTab === 'constraints' && (
+                        <ConstraintsForm
+                            constraints={constraints}
+                            setConstraints={setConstraints}
+                            tasks={tasks}
+                            setTasks={setTasks}
+                        />
+                    )}
+                    {activeTab === 'schedule' && (
+                        <>
+                            <Scheduler
+                                staffList={staffList}
+                                constraints={constraints}
+                                schedule={schedule}
+                                setSchedule={setSchedule}
+                                onSaveToHistory={saveScheduleToHistory}
+                            />
+                            {schedule && (
+                                <>
+                                    <Statistics
+                                        staffList={staffList}
+                                        schedule={schedule}
+                                        constraints={constraints}
+                                    />
+                                    <ExportTools
+                                        schedule={schedule}
+                                        staffList={staffList}
+                                        history={scheduleHistory}
+                                        onLoadHistory={loadScheduleFromHistory}
+                                        onDeleteHistory={deleteScheduleFromHistory}
+                                    />
+                                </>
+                            )}
+                            {!schedule && scheduleHistory.length > 0 && (
+                                <p style={{ textAlign: 'center', color: 'var(--on-surface-variant)', marginTop: '2rem', fontSize: '0.85rem' }}>
                                     Geçmiş çizelgeleri "Dışa Aktar" sekmesinden yönetebilirsiniz.
                                 </p>
-                            </div>
-                        )}
-                    </>
-                )}
-                {activeTab === 'export' && (
-                    <div className="card animate-in">
-                        <h3 style={{ margin: '0 0 20px 0' }}>💾 Veri Yönetimi ve Yedekleme</h3>
-                        <ExportTools
-                            schedule={schedule}
+                            )}
+                        </>
+                    )}
+                    {activeTab === 'export' && (
+                        <div className="card">
+                            <h3 style={{ marginBottom: '16px' }}>💾 Veri Yönetimi ve Yedekleme</h3>
+                            <ExportTools
+                                schedule={schedule}
+                                staffList={staffList}
+                                history={scheduleHistory}
+                                onLoadHistory={loadScheduleFromHistory}
+                                onDeleteHistory={deleteScheduleFromHistory}
+                            />
+                        </div>
+                    )}
+                    {activeTab === 'tasks' && (
+                        <TaskDistribution
                             staffList={staffList}
-                            history={scheduleHistory}
-                            onLoadHistory={loadScheduleFromHistory}
-                            onDeleteHistory={deleteScheduleFromHistory}
+                            schedule={schedule}
+                            constraints={constraints}
+                            setConstraints={setConstraints}
+                            tasks={tasks}
+                            setTasks={setTasks}
+                            onSaveToHistory={saveScheduleToHistory}
                         />
-                    </div>
-                )}
-                {activeTab === 'tasks' && (
-                    <TaskDistribution
-                        staffList={staffList}
-                        schedule={schedule}
-                        constraints={constraints}
-                        setConstraints={setConstraints}
-                        tasks={tasks}
-                        setTasks={setTasks}
-                        onSaveToHistory={saveScheduleToHistory}
-                    />
-                )}
-            </main>
-
-            {/* Footer */}
-            <footer style={{
-                textAlign: 'center',
-                padding: '2rem 0 1rem',
-                color: 'var(--color-text-muted)',
-                fontSize: '0.8rem'
-            }}>
-                <p style={{ margin: 0 }}>
-                    Vardiya Çizelgesi v2.0 • {new Date().getFullYear()}
-                </p>
-            </footer>
+                    )}
+                </main>
+            </div>
         </div>
     );
 }

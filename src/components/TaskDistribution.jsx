@@ -6,7 +6,6 @@ import TaskColumnConfig from './TaskColumnConfig';
 
 const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, onSaveToHistory, setConstraints }) => {
     const [hiddenColumns, setHiddenColumns] = useState(constraints.hiddenTaskColumns || []);
-    const [showConfigModal, setShowConfigModal] = useState(false);
     const [configColumnIndex, setConfigColumnIndex] = useState(null);
     const [activeStatsTab, setActiveStatsTab] = useState(0);
     const [editingCell, setEditingCell] = useState(null); // {dateString, columnIdx, subIdx}
@@ -66,14 +65,14 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
         }));
     };
 
-    // Helper: Get Seniority Color
+    // Helper: Get Seniority Color (from Stitch Design System)
     const getSeniorityColor = (seniority) => {
-        if (!seniority) return 'var(--color-text)';
+        if (!seniority) return 'var(--on-surface-variant)';
         const colors = {
             1: '#ef4444', 2: '#f97316', 3: '#f59e0b', 4: '#eab308', 5: '#84cc16',
             6: '#22c55e', 7: '#10b981', 8: '#14b8a6', 9: '#06b6d4', 10: '#3b82f6'
         };
-        return colors[seniority] || 'var(--color-text)';
+        return colors[seniority] || 'var(--on-surface-variant)';
     };
 
     const handlePrint = () => {
@@ -107,26 +106,17 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
         const month = date.getMonth() + 1;
         const day = date.getDate();
 
-        // Fixed holidays
         const fixedHolidays = [
-            { month: 1, day: 1 },   // Yılbaşı
-            { month: 4, day: 23 },  // 23 Nisan
-            { month: 5, day: 1 },   // İşçi Bayramı
-            { month: 5, day: 19 },  // 19 Mayıs
-            { month: 7, day: 15 },  // 15 Temmuz
-            { month: 8, day: 30 },  // 30 Ağustos
-            { month: 10, day: 29 }, // 29 Ekim
+            { month: 1, day: 1 }, { month: 4, day: 23 }, { month: 5, day: 1 },
+            { month: 5, day: 19 }, { month: 7, day: 15 }, { month: 8, day: 30 }, { month: 10, day: 29 },
         ];
-
-        // Religious holidays (approximate - these change yearly)
         const religiousHolidays2024 = [
-            { month: 4, day: 10 }, { month: 4, day: 11 }, { month: 4, day: 12 }, // Ramazan 2024
-            { month: 6, day: 16 }, { month: 6, day: 17 }, { month: 6, day: 18 }, { month: 6, day: 19 }, // Kurban 2024
+            { month: 4, day: 10 }, { month: 4, day: 11 }, { month: 4, day: 12 },
+            { month: 6, day: 16 }, { month: 6, day: 17 }, { month: 6, day: 18 }, { month: 6, day: 19 },
         ];
-
         const religiousHolidays2025 = [
-            { month: 3, day: 30 }, { month: 3, day: 31 }, { month: 4, day: 1 }, // Ramazan 2025
-            { month: 6, day: 6 }, { month: 6, day: 7 }, { month: 6, day: 8 }, { month: 6, day: 9 }, // Kurban 2025
+            { month: 3, day: 30 }, { month: 3, day: 31 }, { month: 4, day: 1 },
+            { month: 6, day: 6 }, { month: 6, day: 7 }, { month: 6, day: 8 }, { month: 6, day: 9 },
         ];
 
         const checkHoliday = (holidays) => holidays.some(h => h.month === month && h.day === day);
@@ -134,19 +124,18 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
         if (checkHoliday(fixedHolidays)) return true;
         if (year === 2024 && checkHoliday(religiousHolidays2024)) return true;
         if (year === 2025 && checkHoliday(religiousHolidays2025)) return true;
-
         return false;
     };
 
     // Helper: Get row background color based on day type
-    const getRowBackgroundColor = (date) => {
+    const getRowClass = (date) => {
         const dayOfWeek = date.getDay();
         const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
         const isHoliday = isTurkishHoliday(date);
 
-        if (isHoliday) return 'rgba(239, 68, 68, 0.1)'; // Light red for holidays
-        if (isWeekend) return 'rgba(147, 51, 234, 0.08)'; // Light purple for weekends
-        return 'transparent';
+        if (isHoliday) return 'holiday-row';
+        if (isWeekend) return 'weekend-row';
+        return '';
     };
 
     // Helper: Get available staff for a specific day and task
@@ -303,7 +292,7 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
         return (
             <div className="card" style={{ textAlign: 'center', padding: '40px' }}>
                 <h3>Henüz görev sütunu eklenmemiş.</h3>
-                <p>Lütfen "Ayarlar" sekmesinden görev tanımlarını (Ameliyat, Servis vb.) ekleyin.</p>
+                <p style={{ color: 'var(--on-surface-variant)' }}>Lütfen "Ayarlar" sekmesinden görev tanımlarını (Ameliyat, Servis vb.) ekleyin.</p>
             </div>
         );
     }
@@ -313,11 +302,11 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <h3 style={{ margin: 0 }}>Günlük Görev Dağılımı</h3>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                    <button onClick={handlePrint} className="btn btn-secondary" style={{ fontSize: '0.85rem', padding: '8px 12px' }}>
+                    <button onClick={handlePrint} className="btn btn-secondary btn-sm">
                         🖨️ Yazdır
                     </button>
                     {onSaveToHistory && (
-                        <button onClick={onSaveToHistory} className="btn btn-primary" style={{ fontSize: '0.85rem', padding: '8px 12px' }}>
+                        <button onClick={onSaveToHistory} className="btn btn-primary btn-sm">
                             💾 Kaydet
                         </button>
                     )}
@@ -325,12 +314,12 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
             </div>
 
             <div className="print-area">
-                <table style={{ width: 'auto', borderCollapse: 'collapse', fontSize: '0.75rem', tableLayout: 'auto' }}>
+                <table className="data-table" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
                     <thead>
-                        <tr style={{ background: 'var(--color-bg)', borderBottom: '2px solid var(--color-border)' }}>
-                            <th style={{ padding: '4px 6px', textAlign: 'left', whiteSpace: 'nowrap' }}>Tarih</th>
+                        <tr>
+                            <th>Tarih</th>
                             {Array.from({ length: maxAssigned }).map((_, i) => (
-                                <th key={`shift-col-${i}`} style={{ padding: '4px 6px', textAlign: 'left', whiteSpace: 'nowrap' }}>
+                                <th key={`shift-col-${i}`}>
                                     {shiftColumnNames[i] || `Nöbetçi ${i + 1}`}
                                 </th>
                             ))}
@@ -345,7 +334,6 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
                                     <th
                                         key={`${idx}-${subIdx}`}
                                         style={{
-                                            padding: '4px 6px', textAlign: 'left', whiteSpace: 'nowrap',
                                             cursor: subIdx === 0 ? 'grab' : 'default',
                                             opacity: draggedColumnIdx === idx ? 0.5 : 1,
                                             userSelect: 'none'
@@ -399,34 +387,34 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
                                         data-colidx={idx}
                                     >
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            {subIdx === 0 && <span style={{ color: 'var(--color-primary)', marginRight: '2px', cursor: 'grab' }}>⋮⋮</span>}
-                                            <span style={{ fontSize: '0.7rem' }}>{col}{maxPerDay > 1 ? ` ${subIdx + 1}` : ''}</span>
+                                            {subIdx === 0 && <span style={{ color: 'var(--primary)', marginRight: '2px', cursor: 'grab' }}>⋮⋮</span>}
+                                            <span>{col}{maxPerDay > 1 ? ` ${subIdx + 1}` : ''}</span>
                                             {subIdx === 0 && (
-                                                <div className="no-print" style={{ display: 'flex', gap: '2px' }}>
+                                                <div className="no-print" style={{ display: 'flex', gap: '2px', marginLeft: 'auto' }}>
                                                     <button
                                                         onClick={() => setConfigColumnIndex(idx)}
-                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', padding: '1px' }}
+                                                        className="btn-icon"
                                                         title="Ayarlar"
                                                     >
                                                         ⚙️
                                                     </button>
                                                     <button
                                                         onClick={() => handleAutoDistribute(idx, true)}
-                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', padding: '1px' }}
+                                                        className="btn-icon"
                                                         title="Boşları Doldur"
                                                     >
                                                         ➕
                                                     </button>
                                                     <button
                                                         onClick={() => handleAutoDistribute(idx, false)}
-                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', padding: '1px' }}
+                                                        className="btn-icon"
                                                         title="Sıfırdan Dağıt"
                                                     >
                                                         🔄
                                                     </button>
                                                     <button
                                                         onClick={() => toggleColumnVisibility(idx)}
-                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', padding: '1px' }}
+                                                        className="btn-icon"
                                                         title="Gizle"
                                                     >
                                                         👁️
@@ -438,7 +426,7 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
                                 ));
                             })}
                             {/* Leave Column Header */}
-                            <th style={{ padding: '4px 6px', textAlign: 'left', whiteSpace: 'nowrap', background: 'rgba(239, 68, 68, 0.1)' }}>
+                            <th style={{ background: 'var(--surface-container-high)', borderLeft: '2px solid var(--surface-container-highest)' }}>
                                 {editingLeaveColumnName ? (
                                     <input
                                         type="text"
@@ -458,17 +446,17 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
                                         style={{
                                             fontSize: '0.7rem',
                                             padding: '2px 4px',
-                                            border: '1px solid var(--color-primary)',
-                                            borderRadius: '3px',
-                                            background: 'var(--color-bg)',
-                                            color: 'var(--color-text)',
+                                            border: '1px solid var(--primary)',
+                                            borderRadius: 'var(--radius-sm)',
+                                            background: 'var(--surface-container)',
+                                            color: 'var(--on-surface)',
                                             width: '80px'
                                         }}
                                     />
                                 ) : (
                                     <span
                                         onClick={() => setEditingLeaveColumnName(true)}
-                                        style={{ cursor: 'pointer', fontSize: '0.7rem' }}
+                                        style={{ cursor: 'pointer' }}
                                         title="Sütun adını değiştirmek için tıklayın"
                                     >
                                         {leaveColumnName} ✏️
@@ -487,15 +475,17 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
                             const shiftStaff = schedule && schedule[dateString] ? [...schedule[dateString]] : [];
                             shiftStaff.sort((a, b) => b.seniority - a.seniority);
 
+                            const rowClass = getRowClass(day);
+
                             return (
-                                <tr key={dateString} style={{ borderBottom: '1px solid var(--color-border)', background: getRowBackgroundColor(day) }}>
-                                    <td style={{ padding: '4px 8px', fontWeight: '500', fontSize: '0.75rem' }}>{dayName}</td>
+                                <tr key={dateString} className={rowClass}>
+                                    <td style={{ fontWeight: '600', color: 'var(--on-surface-variant)' }}>{dayName}</td>
 
                                     {/* Shift Columns */}
                                     {Array.from({ length: maxAssigned }).map((_, i) => {
                                         const staffMember = shiftStaff[i];
                                         return (
-                                            <td key={`shift-cell-${dateString}-${i}`} style={{ padding: '4px 8px', color: staffMember ? getSeniorityColor(staffMember.seniority) : 'inherit', fontWeight: '500', fontSize: '0.75rem' }}>
+                                            <td key={`shift-cell-${dateString}-${i}`} style={{ color: staffMember ? getSeniorityColor(staffMember.seniority) : 'inherit', fontWeight: '500' }}>
                                                 {staffMember ? staffMember.name : '-'}
                                             </td>
                                         );
@@ -522,7 +512,9 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
                                             const assignedStaff = staffList.find(s => s.id === assignedId);
 
                                             return (
-                                                <td key={`${idx}-${subIdx}`} style={{ padding: '2px 4px', minWidth: '80px' }}>
+                                                <td key={`${idx}-${subIdx}`} style={{ minWidth: '100px', cursor: 'pointer' }} onClick={() => {
+                                                    if (!isEditing) setEditingCell({ dateString, columnIdx: idx, subIdx });
+                                                }}>
                                                     {isEditing ? (
                                                         <select
                                                             value={assignedId || ""}
@@ -556,9 +548,12 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
                                                             }}
                                                             style={{
                                                                 width: '100%',
-                                                                padding: '2px',
-                                                                fontSize: '0.7rem',
-                                                                fontWeight: '600',
+                                                                padding: '4px',
+                                                                fontSize: '0.75rem',
+                                                                background: 'var(--surface-container-highest)',
+                                                                color: 'var(--on-surface)',
+                                                                border: '1px solid var(--primary)',
+                                                                borderRadius: 'var(--radius-sm)',
                                                                 outline: 'none'
                                                             }}
                                                         >
@@ -572,7 +567,7 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
                                                             </optgroup>
                                                             <optgroup label="❌ Meşgul / İzinli">
                                                                 {busyStaff.map(s => (
-                                                                    <option key={s.id} value={s.id} disabled style={{ fontStyle: 'italic' }}>
+                                                                    <option key={s.id} value={s.id} disabled style={{ color: 'var(--on-surface-variant)' }}>
                                                                         {s.name} ({s.reason})
                                                                     </option>
                                                                 ))}
@@ -580,16 +575,19 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
                                                         </select>
                                                     ) : (
                                                         <div
-                                                            onClick={() => setEditingCell({ dateString, columnIdx: idx, subIdx })}
+                                                            className="avail-cell"
                                                             style={{
-                                                                cursor: 'pointer',
-                                                                padding: '2px 4px',
-                                                                fontSize: '0.7rem',
+                                                                padding: '4px 6px',
+                                                                fontSize: '0.75rem',
                                                                 fontWeight: assignedStaff ? '600' : '400',
-                                                                color: assignedStaff ? getSeniorityColor(assignedStaff.seniority) : 'var(--color-text-muted)',
-                                                                minHeight: '20px',
+                                                                color: assignedStaff ? getSeniorityColor(assignedStaff.seniority) : 'var(--on-surface-variant)',
+                                                                background: assignedStaff ? 'transparent' : 'var(--surface-container-lowest)',
+                                                                border: assignedStaff ? `1px solid ${getSeniorityColor(assignedStaff.seniority)}` : '1px dashed var(--surface-container-highest)',
+                                                                borderRadius: 'var(--radius-sm)',
                                                                 display: 'flex',
-                                                                alignItems: 'center'
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                minHeight: '24px'
                                                             }}
                                                         >
                                                             {assignedStaff ? assignedStaff.name : '-'}
@@ -602,11 +600,10 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
 
                                     {/* Leave Column */}
                                     <td style={{
-                                        padding: '2px 6px',
-                                        background: 'rgba(239, 68, 68, 0.05)',
+                                        color: 'var(--error)',
+                                        whiteSpace: 'nowrap',
                                         fontSize: '0.7rem',
-                                        color: 'var(--color-text-muted)',
-                                        whiteSpace: 'nowrap'
+                                        borderLeft: '2px solid var(--surface-container-highest)'
                                     }}>
                                         {getLeaveStaff(dateString).map(s => s.name).join(', ') || '-'}
                                     </td>
@@ -618,28 +615,18 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
 
 
                 {/* Per-Column Statistics with Tabs */}
-                <div style={{ marginTop: '24px', padding: '16px', background: 'var(--color-surface)', borderRadius: '8px' }} className="no-print">
-                    <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem' }}>📊 Görev İstatistikleri</h4>
+                <div className="card no-print" style={{ marginTop: '24px', background: 'var(--surface-container)' }}>
+                    <h4 style={{ margin: '0 0 16px 0', fontSize: '0.9rem' }}>📊 Görev İstatistikleri</h4>
 
                     {/* Tab Navigation */}
-                    <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '6px', marginBottom: '16px', flexWrap: 'wrap' }}>
                         {taskColumns.map((col, idx) => {
                             if (hiddenColumns.includes(idx)) return null;
                             return (
                                 <button
                                     key={idx}
                                     onClick={() => setActiveStatsTab(idx)}
-                                    style={{
-                                        padding: '8px 16px',
-                                        borderRadius: '6px',
-                                        border: activeStatsTab === idx ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
-                                        background: activeStatsTab === idx ? 'var(--color-primary)' : 'var(--color-bg)',
-                                        color: activeStatsTab === idx ? 'white' : 'var(--color-text)',
-                                        cursor: 'pointer',
-                                        fontSize: '0.8rem',
-                                        fontWeight: activeStatsTab === idx ? '700' : '500',
-                                        transition: 'all 0.2s'
-                                    }}
+                                    className={`mode-btn${activeStatsTab === idx ? ' active-required' : ''}`}
                                 >
                                     {col}
                                 </button>
@@ -649,34 +636,34 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
 
                     {/* Statistics Table for Active Column */}
                     <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
+                        <table className="data-table" style={{ fontSize: '0.75rem' }}>
                             <thead>
-                                <tr style={{ borderBottom: '2px solid var(--color-border)' }}>
-                                    <th style={{ padding: '6px 8px', textAlign: 'left', fontWeight: '600' }}>Personel</th>
-                                    <th style={{ padding: '6px 8px', textAlign: 'center', fontWeight: '600' }}>Pzt</th>
-                                    <th style={{ padding: '6px 8px', textAlign: 'center', fontWeight: '600' }}>Sal</th>
-                                    <th style={{ padding: '6px 8px', textAlign: 'center', fontWeight: '600' }}>Çar</th>
-                                    <th style={{ padding: '6px 8px', textAlign: 'center', fontWeight: '600' }}>Per</th>
-                                    <th style={{ padding: '6px 8px', textAlign: 'center', fontWeight: '600' }}>Cum</th>
-                                    <th style={{ padding: '6px 8px', textAlign: 'center', fontWeight: '600', background: 'rgba(147, 51, 234, 0.1)' }}>Cmt</th>
-                                    <th style={{ padding: '6px 8px', textAlign: 'center', fontWeight: '600', background: 'rgba(147, 51, 234, 0.1)' }}>Paz</th>
-                                    <th style={{ padding: '6px 8px', textAlign: 'center', fontWeight: '700', background: 'var(--color-bg)' }}>Toplam</th>
+                                <tr>
+                                    <th>Personel</th>
+                                    <th style={{ textAlign: 'center' }}>Pzt</th>
+                                    <th style={{ textAlign: 'center' }}>Sal</th>
+                                    <th style={{ textAlign: 'center' }}>Çar</th>
+                                    <th style={{ textAlign: 'center' }}>Per</th>
+                                    <th style={{ textAlign: 'center' }}>Cum</th>
+                                    <th style={{ textAlign: 'center', background: 'rgba(102, 217, 204, 0.05)' }}>Cmt</th>
+                                    <th style={{ textAlign: 'center', background: 'rgba(102, 217, 204, 0.05)' }}>Paz</th>
+                                    <th style={{ textAlign: 'center', color: 'var(--primary)' }}>Toplam</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {calculateColumnDayStats(activeStatsTab).map(stat => (
-                                    <tr key={stat.name} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                                        <td style={{ padding: '6px 8px', fontWeight: '600', color: getSeniorityColor(stat.seniority) }}>
+                                    <tr key={stat.name}>
+                                        <td style={{ fontWeight: '600', color: getSeniorityColor(stat.seniority) }}>
                                             {stat.name}
                                         </td>
-                                        <td style={{ padding: '6px 8px', textAlign: 'center' }}>{stat.days[1] || '-'}</td>
-                                        <td style={{ padding: '6px 8px', textAlign: 'center' }}>{stat.days[2] || '-'}</td>
-                                        <td style={{ padding: '6px 8px', textAlign: 'center' }}>{stat.days[3] || '-'}</td>
-                                        <td style={{ padding: '6px 8px', textAlign: 'center' }}>{stat.days[4] || '-'}</td>
-                                        <td style={{ padding: '6px 8px', textAlign: 'center' }}>{stat.days[5] || '-'}</td>
-                                        <td style={{ padding: '6px 8px', textAlign: 'center', background: 'rgba(147, 51, 234, 0.05)' }}>{stat.days[6] || '-'}</td>
-                                        <td style={{ padding: '6px 8px', textAlign: 'center', background: 'rgba(147, 51, 234, 0.05)' }}>{stat.days[0] || '-'}</td>
-                                        <td style={{ padding: '6px 8px', textAlign: 'center', fontWeight: '700', background: 'var(--color-bg)', color: 'var(--color-primary)' }}>
+                                        <td style={{ textAlign: 'center' }}>{stat.days[1] || '-'}</td>
+                                        <td style={{ textAlign: 'center' }}>{stat.days[2] || '-'}</td>
+                                        <td style={{ textAlign: 'center' }}>{stat.days[3] || '-'}</td>
+                                        <td style={{ textAlign: 'center' }}>{stat.days[4] || '-'}</td>
+                                        <td style={{ textAlign: 'center' }}>{stat.days[5] || '-'}</td>
+                                        <td className="weekend-row" style={{ textAlign: 'center' }}>{stat.days[6] || '-'}</td>
+                                        <td className="weekend-row" style={{ textAlign: 'center' }}>{stat.days[0] || '-'}</td>
+                                        <td style={{ textAlign: 'center', fontWeight: '700', color: 'var(--primary)' }}>
                                             {stat.total}
                                         </td>
                                     </tr>
@@ -688,22 +675,15 @@ const TaskDistribution = ({ staffList, schedule, constraints, tasks, setTasks, o
 
                 {/* Hidden Columns Info */}
                 {hiddenColumns.length > 0 && (
-                    <div style={{ marginTop: '12px', padding: '12px', background: 'var(--color-bg)', borderRadius: '6px', fontSize: '0.8rem' }} className="no-print">
-                        <div style={{ fontWeight: '600', marginBottom: '8px' }}>👁️ Gizli Sütunlar:</div>
+                    <div className="hint-bar no-print" style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ fontWeight: '600' }}>👁️ Gizli Sütunlar:</div>
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                             {hiddenColumns.map(idx => (
-                                <div key={idx} style={{
-                                    display: 'flex', alignItems: 'center', gap: '6px',
-                                    padding: '4px 8px', background: 'var(--color-surface)',
-                                    border: '1px solid var(--color-border)', borderRadius: '4px'
-                                }}>
+                                <div key={idx} className="task-col-tag">
                                     <span>{taskColumns[idx]}</span>
                                     <button
                                         onClick={() => toggleColumnVisibility(idx)}
-                                        style={{
-                                            background: 'none', border: 'none', cursor: 'pointer',
-                                            color: 'var(--color-primary)', fontSize: '0.75rem', fontWeight: '600', padding: 0
-                                        }}
+                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', padding: 0 }}
                                     >
                                         [+ Göster]
                                     </button>

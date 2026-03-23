@@ -28,7 +28,6 @@ const UnavailabilityGrid = ({ staffList, setStaffList, selectedMonth }) => {
                         unavailability: isUnavailable
                             ? unavailability.filter(d => d !== dateString)
                             : [...unavailability, dateString],
-                        // Clear from other arrays
                         leaveDays: leaveDays.filter(d => d !== dateString),
                         requiredDays: requiredDays.filter(d => d !== dateString)
                     };
@@ -39,7 +38,6 @@ const UnavailabilityGrid = ({ staffList, setStaffList, selectedMonth }) => {
                         leaveDays: isLeave
                             ? leaveDays.filter(d => d !== dateString)
                             : [...leaveDays, dateString],
-                        // Clear from other arrays
                         unavailability: unavailability.filter(d => d !== dateString),
                         requiredDays: requiredDays.filter(d => d !== dateString)
                     };
@@ -50,7 +48,6 @@ const UnavailabilityGrid = ({ staffList, setStaffList, selectedMonth }) => {
                         requiredDays: isRequired
                             ? requiredDays.filter(d => d !== dateString)
                             : [...requiredDays, dateString],
-                        // Clear from other arrays
                         unavailability: unavailability.filter(d => d !== dateString),
                         leaveDays: leaveDays.filter(d => d !== dateString)
                     };
@@ -66,36 +63,30 @@ const UnavailabilityGrid = ({ staffList, setStaffList, selectedMonth }) => {
     const dayNames = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
 
     const getSeniorityColor = (seniority) => {
-        if (seniority <= 2) return '#f87171';
-        if (seniority <= 4) return '#fbbf24';
-        if (seniority <= 6) return '#4ade80';
-        if (seniority <= 8) return '#60a5fa';
-        return '#a78bfa';
+        if (seniority <= 2) return '#ef4444';
+        if (seniority <= 4) return '#f59e0b';
+        if (seniority <= 6) return '#22c55e';
+        if (seniority <= 8) return '#3b82f6';
+        return '#8b5cf6';
     };
 
     if (staffList.length === 0) {
         return (
-            <div className="card" style={{ textAlign: 'center', padding: '60px 20px' }}>
-                <div style={{ fontSize: '3rem', marginBottom: '16px' }}>📅</div>
-                <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>
-                    Müsaitlik tablosu için önce personel ekleyin.
-                </p>
+            <div className="card">
+                <div className="empty-state">
+                    <div className="empty-state-icon">📅</div>
+                    <p>Müsaitlik tablosu için önce personel ekleyin.</p>
+                </div>
             </div>
         );
     }
 
     return (
         <div className="card" style={{ overflowX: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+            <div className="toolbar">
                 <div>
-                    <h3 style={{ margin: 0 }}>📅 Müsaitlik Takvimi</h3>
-                    <div style={{
-                        fontSize: '1.1em',
-                        fontWeight: '600',
-                        color: 'var(--color-primary-light)',
-                        marginTop: '4px',
-                        textTransform: 'capitalize'
-                    }}>
+                    <h3>📅 Müsaitlik Takvimi</h3>
+                    <div className="month-badge" style={{ marginTop: '6px' }}>
                         {monthTitle}
                     </div>
                 </div>
@@ -113,83 +104,38 @@ const UnavailabilityGrid = ({ staffList, setStaffList, selectedMonth }) => {
                             }));
                         }
                     }}
-                    className="btn btn-ghost"
-                    style={{ fontSize: '0.85rem', color: '#ef4444', padding: '6px 12px' }}
+                    className="btn btn-ghost btn-sm"
+                    style={{ color: 'var(--error)' }}
                 >
                     🗑️ Aktif Ayı Sıfırla
                 </button>
             </div>
 
-            {/* Selection Mode Toggle - 3 BUTTONS */}
-            <div style={{
-                display: 'flex',
-                gap: '8px',
-                marginBottom: '16px',
-                padding: '10px',
-                backgroundColor: 'var(--color-bg)',
-                borderRadius: '8px',
-                flexWrap: 'wrap'
-            }}>
-                <span style={{ fontWeight: '500', marginRight: '8px', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center' }}>Mod:</span>
+            {/* Selection Mode Toggle */}
+            <div className="mode-btn-group" style={{ marginBottom: '16px' }}>
+                <span style={{ fontWeight: '500', padding: '0 8px', color: 'var(--on-surface-variant)', display: 'flex', alignItems: 'center', fontSize: '0.8rem' }}>Mod:</span>
                 <button
+                    className={`mode-btn${selectionMode === 'unavailable' ? ' active-leave' : ''}`}
                     onClick={() => setSelectionMode('unavailable')}
-                    style={{
-                        padding: '8px 14px',
-                        borderRadius: '6px',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontWeight: '600',
-                        fontSize: '0.85rem',
-                        backgroundColor: selectionMode === 'unavailable' ? 'rgba(239, 68, 68, 0.2)' : 'var(--color-surface)',
-                        color: selectionMode === 'unavailable' ? '#f87171' : 'var(--color-text-muted)',
-                        transition: 'all 0.2s ease'
-                    }}
                 >
                     ✕ Müsait Değil
                 </button>
                 <button
+                    className={`mode-btn${selectionMode === 'leave' ? ' active-unavailable' : ''}`}
                     onClick={() => setSelectionMode('leave')}
-                    style={{
-                        padding: '8px 14px',
-                        borderRadius: '6px',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontWeight: '600',
-                        fontSize: '0.85rem',
-                        backgroundColor: selectionMode === 'leave' ? 'rgba(245, 158, 11, 0.2)' : 'var(--color-surface)',
-                        color: selectionMode === 'leave' ? '#fbbf24' : 'var(--color-text-muted)',
-                        transition: 'all 0.2s ease'
-                    }}
                 >
                     🏖️ İzinli
                 </button>
                 <button
+                    className={`mode-btn${selectionMode === 'required' ? ' active-required' : ''}`}
                     onClick={() => setSelectionMode('required')}
-                    style={{
-                        padding: '8px 14px',
-                        borderRadius: '6px',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontWeight: '600',
-                        fontSize: '0.85rem',
-                        backgroundColor: selectionMode === 'required' ? 'rgba(34, 197, 94, 0.2)' : 'var(--color-surface)',
-                        color: selectionMode === 'required' ? '#4ade80' : 'var(--color-text-muted)',
-                        transition: 'all 0.2s ease'
-                    }}
                 >
                     ✓ Nöbet Yazılsın
                 </button>
             </div>
 
             {/* Helper Text */}
-            <div style={{
-                marginBottom: '16px',
-                padding: '10px 12px',
-                backgroundColor: 'var(--color-bg)',
-                borderRadius: '6px',
-                fontSize: '0.8rem',
-                color: 'var(--color-text-muted)'
-            }}>
+            <div className="hint-bar" style={{ marginBottom: '16px' }}>
                 {selectionMode === 'unavailable' && (
                     <span>🔴 <strong>Müsait Değil:</strong> Tercih olarak işaretlenir, nöbet hedefini ETKİLEMEZ</span>
                 )}
@@ -212,12 +158,15 @@ const UnavailabilityGrid = ({ staffList, setStaffList, selectedMonth }) => {
                 <div style={{
                     fontWeight: '600',
                     padding: '8px',
-                    backgroundColor: 'var(--color-bg)',
-                    borderRadius: '4px 0 0 0',
+                    backgroundColor: 'var(--surface-container-high)',
+                    borderRadius: 'var(--radius-sm) 0 0 0',
                     position: 'sticky',
                     left: 0,
                     zIndex: 2,
-                    color: 'var(--color-text-muted)'
+                    color: 'var(--on-surface-variant)',
+                    fontSize: '0.7rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em'
                 }}>
                     Personel
                 </div>
@@ -227,17 +176,11 @@ const UnavailabilityGrid = ({ staffList, setStaffList, selectedMonth }) => {
                     return (
                         <div
                             key={idx}
-                            style={{
-                                padding: '4px 2px',
-                                textAlign: 'center',
-                                fontWeight: '600',
-                                backgroundColor: isWknd ? 'rgba(139, 92, 246, 0.2)' : 'var(--color-bg)',
-                                color: isWknd ? '#a78bfa' : 'var(--color-text-muted)',
-                                borderRadius: idx === days.length - 1 ? '0 4px 0 0' : '0'
-                            }}
+                            className={`schedule-day-header${isWknd ? ' weekend' : ''}`}
+                            style={{ padding: '4px 2px' }}
                         >
                             <div>{format(day, 'd')}</div>
-                            <div style={{ fontSize: '0.65rem', opacity: 0.7 }}>{dayNames[dayOfWeek]}</div>
+                            <div style={{ fontSize: '0.6rem', opacity: 0.7 }}>{dayNames[dayOfWeek]}</div>
                         </div>
                     );
                 })}
@@ -247,7 +190,7 @@ const UnavailabilityGrid = ({ staffList, setStaffList, selectedMonth }) => {
                     <React.Fragment key={staff.id}>
                         <div style={{
                             padding: '8px',
-                            backgroundColor: staffIdx % 2 === 0 ? 'var(--color-surface)' : 'var(--color-bg)',
+                            backgroundColor: staffIdx % 2 === 0 ? 'var(--surface-container)' : 'var(--surface-container-low)',
                             fontWeight: '500',
                             display: 'flex',
                             alignItems: 'center',
@@ -261,7 +204,8 @@ const UnavailabilityGrid = ({ staffList, setStaffList, selectedMonth }) => {
                                 whiteSpace: 'nowrap',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
-                                maxWidth: '130px'
+                                maxWidth: '130px',
+                                fontSize: '0.8rem'
                             }}>
                                 {staff.name || `${staff.firstName} ${staff.lastName}`}
                             </span>
@@ -274,56 +218,25 @@ const UnavailabilityGrid = ({ staffList, setStaffList, selectedMonth }) => {
                             const required = isRequired(staff, dateString);
                             const isWknd = isWeekend(day);
 
-                            let bgColor = isWknd ? 'rgba(139, 92, 246, 0.1)' : (staffIdx % 2 === 0 ? 'var(--color-surface)' : 'var(--color-bg)');
-                            let borderStyle = '1px solid var(--color-border)';
-                            let icon = null;
+                            let cellClass = 'avail-cell';
+                            if (isWknd) cellClass += ' weekend';
+                            if (unavailable) cellClass += ' unavailable';
+                            else if (leave) cellClass += ' leave';
+                            else if (required) cellClass += ' required';
 
-                            if (unavailable) {
-                                bgColor = 'rgba(239, 68, 68, 0.15)';
-                                borderStyle = '2px solid #f87171';
-                                icon = <span style={{ color: '#f87171' }}>✕</span>;
-                            } else if (leave) {
-                                bgColor = 'rgba(245, 158, 11, 0.15)';
-                                borderStyle = '2px solid #fbbf24';
-                                icon = <span style={{ color: '#fbbf24' }}>🏖️</span>;
-                            } else if (required) {
-                                bgColor = 'rgba(34, 197, 94, 0.15)';
-                                borderStyle = '2px solid #4ade80';
-                                icon = <span style={{ color: '#4ade80' }}>✓</span>;
-                            }
+                            let icon = null;
+                            if (unavailable) icon = <span>✕</span>;
+                            else if (leave) icon = <span>🏖️</span>;
+                            else if (required) icon = <span>✓</span>;
 
                             return (
                                 <div
                                     key={`${staff.id}-${dateString}`}
+                                    className={cellClass}
                                     onClick={() => handleCellClick(staff.id, dateString)}
                                     style={{
-                                        padding: '4px',
-                                        textAlign: 'center',
-                                        cursor: 'pointer',
-                                        backgroundColor: bgColor,
-                                        transition: 'all 0.15s ease',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
                                         minHeight: '28px',
-                                        border: borderStyle,
-                                        fontSize: '0.9rem'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        if (!unavailable && !leave && !required) {
-                                            if (selectionMode === 'unavailable') {
-                                                e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
-                                            } else if (selectionMode === 'leave') {
-                                                e.currentTarget.style.backgroundColor = 'rgba(245, 158, 11, 0.1)';
-                                            } else {
-                                                e.currentTarget.style.backgroundColor = 'rgba(34, 197, 94, 0.1)';
-                                            }
-                                        }
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        if (!unavailable && !leave && !required) {
-                                            e.currentTarget.style.backgroundColor = bgColor;
-                                        }
+                                        fontSize: unavailable || required ? '0.7rem' : '0.65rem'
                                     }}
                                 >
                                     {icon}
@@ -335,34 +248,21 @@ const UnavailabilityGrid = ({ staffList, setStaffList, selectedMonth }) => {
             </div>
 
             {/* Legend */}
-            <div style={{
-                display: 'flex',
-                gap: '16px',
-                marginTop: '16px',
-                fontSize: '0.8rem',
-                color: 'var(--color-text-muted)',
-                flexWrap: 'wrap'
-            }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <div style={{ width: '16px', height: '16px', backgroundColor: 'rgba(139, 92, 246, 0.2)', borderRadius: '3px' }}></div>
+            <div className="legend-bar" style={{ marginTop: '16px' }}>
+                <div className="legend-item">
+                    <div className="legend-swatch" style={{ background: 'rgba(102, 217, 204, 0.15)' }} />
                     <span>Hafta Sonu</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <div style={{ width: '16px', height: '16px', backgroundColor: 'rgba(239, 68, 68, 0.2)', border: '2px solid #f87171', borderRadius: '3px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{ color: '#f87171', fontSize: '0.6rem' }}>✕</span>
-                    </div>
+                <div className="legend-item">
+                    <div className="legend-swatch avail-cell unavailable" style={{ width: '14px', height: '14px' }} />
                     <span>Müsait Değil (Tercih)</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <div style={{ width: '16px', height: '16px', backgroundColor: 'rgba(245, 158, 11, 0.2)', border: '2px solid #fbbf24', borderRadius: '3px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{ fontSize: '0.5rem' }}>🏖️</span>
-                    </div>
+                <div className="legend-item">
+                    <div className="legend-swatch avail-cell leave" style={{ width: '14px', height: '14px' }} />
                     <span>İzinli (Hedefi Etkiler)</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <div style={{ width: '16px', height: '16px', backgroundColor: 'rgba(34, 197, 94, 0.2)', border: '2px solid #4ade80', borderRadius: '3px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{ color: '#4ade80', fontSize: '0.6rem' }}>✓</span>
-                    </div>
+                <div className="legend-item">
+                    <div className="legend-swatch avail-cell required" style={{ width: '14px', height: '14px' }} />
                     <span>Nöbet Yazılsın</span>
                 </div>
             </div>

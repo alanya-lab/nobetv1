@@ -33,7 +33,7 @@ const ConstraintsForm = ({ constraints, setConstraints, tasks, setTasks }) => {
 
     return (
         <div className="card">
-            <h3 style={{ margin: '0 0 20px 0' }}>⚙️ Çizelge Ayarları</h3>
+            <h3 style={{ marginBottom: '20px' }}>⚙️ Çizelge Ayarları</h3>
 
             {/* Month Selection */}
             <div style={{ marginBottom: '24px' }}>
@@ -48,23 +48,18 @@ const ConstraintsForm = ({ constraints, setConstraints, tasks, setTasks }) => {
             </div>
 
             {/* Daily Needs */}
-            <div style={{ marginBottom: '24px' }}>
-                <label style={{ marginBottom: '12px', display: 'block' }}>Günlük Personel İhtiyacı</label>
-                <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(7, 1fr)',
-                    gap: '8px',
-                    maxWidth: '500px'
-                }}>
+            <div className="settings-section" style={{ marginBottom: '20px' }}>
+                <h4>Günlük Personel İhtiyacı</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px', maxWidth: '500px' }}>
                     {days.map(day => (
                         <div key={day.key} style={{ textAlign: 'center' }}>
                             <div style={{
                                 marginBottom: '6px',
-                                fontSize: '0.75rem',
+                                fontSize: '0.72rem',
                                 fontWeight: '600',
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.05em',
-                                color: isWeekend(day.key) ? '#a78bfa' : 'var(--color-text-muted)'
+                                color: isWeekend(day.key) ? 'var(--primary)' : 'var(--on-surface-variant)'
                             }}>
                                 {day.label}
                             </div>
@@ -79,7 +74,7 @@ const ConstraintsForm = ({ constraints, setConstraints, tasks, setTasks }) => {
                                     padding: '10px 8px',
                                     fontWeight: '600',
                                     fontSize: '1rem',
-                                    backgroundColor: isWeekend(day.key) ? 'rgba(139, 92, 246, 0.1)' : 'var(--color-bg)'
+                                    backgroundColor: isWeekend(day.key) ? 'rgba(102, 217, 204, 0.08)' : undefined
                                 }}
                             />
                         </div>
@@ -88,94 +83,42 @@ const ConstraintsForm = ({ constraints, setConstraints, tasks, setTasks }) => {
             </div>
 
             {/* Other Settings */}
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: '20px'
-            }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
                 <div>
                     <label>Vardiya Süresi (saat)</label>
-                    <input
-                        type="number"
-                        name="shiftDuration"
-                        value={constraints.shiftDuration}
-                        onChange={handleInputChange}
-                        min="1"
-                        max="24"
-                    />
+                    <input type="number" name="shiftDuration" value={constraints.shiftDuration} onChange={handleInputChange} min="1" max="24" />
                 </div>
 
                 <div>
                     <label>Max Vardiya/Ay</label>
-                    <input
-                        type="number"
-                        name="maxShiftsPerMonth"
-                        value={constraints.maxShiftsPerMonth}
-                        onChange={handleInputChange}
-                        min="1"
-                        max="31"
-                    />
+                    <input type="number" name="maxShiftsPerMonth" value={constraints.maxShiftsPerMonth} onChange={handleInputChange} min="1" max="31" />
                 </div>
 
                 <div>
                     <label>Min Dinlenme (saat)</label>
-                    <input
-                        type="number"
-                        name="minRestHours"
-                        value={constraints.minRestHours}
-                        onChange={handleInputChange}
-                        min="0"
-                        max="72"
-                    />
-                    <p style={{
-                        marginTop: '4px',
-                        fontSize: '0.75rem',
-                        color: 'var(--color-text-muted)'
-                    }}>
+                    <input type="number" name="minRestHours" value={constraints.minRestHours} onChange={handleInputChange} min="0" max="72" />
+                    <p style={{ marginTop: '4px', fontSize: '0.72rem', color: 'var(--on-surface-variant)' }}>
                         {constraints.minRestHours > 12 ? '(Arka arkaya nöbet yok)' : '(Arka arkaya nöbet izinli)'}
                     </p>
                 </div>
 
                 <div>
                     <label>Min Kıdem Toplamı</label>
-                    <input
-                        type="number"
-                        name="minSenioritySum"
-                        value={constraints.minSenioritySum || ''}
-                        onChange={handleInputChange}
-                        min="0"
-                        placeholder="Örn: 5"
-                    />
+                    <input type="number" name="minSenioritySum" value={constraints.minSenioritySum || ''} onChange={handleInputChange} min="0" placeholder="Örn: 5" />
                 </div>
 
                 <div>
                     <label>Max Kıdem Toplamı</label>
-                    <input
-                        type="number"
-                        name="maxSenioritySum"
-                        value={constraints.maxSenioritySum || ''}
-                        onChange={handleInputChange}
-                        min="0"
-                        placeholder="Örn: 15"
-                    />
+                    <input type="number" name="maxSenioritySum" value={constraints.maxSenioritySum || ''} onChange={handleInputChange} min="0" placeholder="Örn: 15" />
                 </div>
 
-                <div style={{ gridColumn: '1 / -1', marginTop: '10px', padding: '16px', backgroundColor: 'var(--color-bg)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
-                    <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600' }}>⭐ Kıdemli Öncelikli Günler</label>
+                {/* Beneficial Days */}
+                <div className="settings-section" style={{ gridColumn: '1 / -1' }}>
+                    <h4>⭐ Kıdemli Öncelikli Günler</h4>
 
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '16px' }}>
                         {days.map(day => (
-                            <label key={day.key} style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                padding: '6px 12px',
-                                backgroundColor: constraints.beneficialDays?.includes(day.key) ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
-                                border: `1px solid ${constraints.beneficialDays?.includes(day.key) ? '#6366f1' : 'var(--color-border)'}`,
-                                borderRadius: '20px',
-                                cursor: 'pointer',
-                                fontSize: '0.85rem'
-                            }}>
+                            <label key={day.key} className={`day-pill${constraints.beneficialDays?.includes(day.key) ? ' active' : ''}`}>
                                 <input
                                     type="checkbox"
                                     checked={constraints.beneficialDays?.includes(day.key) || false}
@@ -186,7 +129,7 @@ const ConstraintsForm = ({ constraints, setConstraints, tasks, setTasks }) => {
                                             : current.filter(d => d !== day.key);
                                         setConstraints({ ...constraints, beneficialDays: updated });
                                     }}
-                                    style={{ accentColor: '#6366f1' }}
+                                    style={{ display: 'none' }}
                                 />
                                 {day.label}
                             </label>
@@ -194,26 +137,26 @@ const ConstraintsForm = ({ constraints, setConstraints, tasks, setTasks }) => {
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <label style={{ fontSize: '0.9rem' }}>Minimum Kıdem Eşiği:</label>
+                        <label style={{ fontSize: '0.85rem', marginBottom: 0 }}>Minimum Kıdem Eşiği:</label>
                         <select
                             value={constraints.beneficialDaysThreshold || 4}
                             onChange={(e) => setConstraints({ ...constraints, beneficialDaysThreshold: parseInt(e.target.value, 10) })}
-                            style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--color-border)' }}
+                            style={{ width: 'auto', padding: '6px 10px' }}
                         >
                             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
                                 <option key={n} value={n}>{n}</option>
                             ))}
                         </select>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)' }}>
                             (Seçilen günlerde bu kıdem ve üzeri öncelikli atanır)
                         </span>
                     </div>
                 </div>
 
                 {/* Slot System */}
-                <div style={{ gridColumn: '1 / -1', marginTop: '10px', padding: '16px', backgroundColor: 'var(--color-bg)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+                <div className="settings-section" style={{ gridColumn: '1 / -1' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                        <label style={{ fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                        <label style={{ fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginBottom: 0 }}>
                             <input
                                 type="checkbox"
                                 checked={constraints.slotSystem?.enabled || false}
@@ -221,7 +164,7 @@ const ConstraintsForm = ({ constraints, setConstraints, tasks, setTasks }) => {
                                     ...constraints,
                                     slotSystem: { ...constraints.slotSystem, enabled: e.target.checked }
                                 })}
-                                style={{ width: '18px', height: '18px', accentColor: '#6366f1' }}
+                                style={{ width: '18px', height: '18px', accentColor: 'var(--primary)' }}
                             />
                             ☑️ Slot Sistemini Aktif Et
                         </label>
@@ -229,25 +172,17 @@ const ConstraintsForm = ({ constraints, setConstraints, tasks, setTasks }) => {
 
                     {constraints.slotSystem?.enabled && (
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                            {/* Slot 1 */}
                             <div>
-                                <h4 style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: '#6366f1' }}>📌 Slot 1 (1. Nöbetçi)</h4>
+                                <h4 style={{ color: 'var(--primary)', fontSize: '0.9rem' }}>📌 Slot 1 (1. Nöbetçi)</h4>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                                     {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map(seniority => (
-                                        <label key={`s1-${seniority}`} style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            width: '32px',
-                                            height: '32px',
-                                            borderRadius: '50%',
-                                            border: `1px solid ${constraints.slotSystem?.slot1Seniorities?.includes(seniority) ? '#6366f1' : 'var(--color-border)'}`,
-                                            backgroundColor: constraints.slotSystem?.slot1Seniorities?.includes(seniority) ? '#6366f1' : 'transparent',
-                                            color: constraints.slotSystem?.slot1Seniorities?.includes(seniority) ? 'white' : 'var(--color-text)',
-                                            cursor: 'pointer',
-                                            fontSize: '0.85rem',
-                                            fontWeight: '600'
-                                        }}>
+                                        <label key={`s1-${seniority}`}
+                                            className="seniority-circle"
+                                            style={{
+                                                backgroundColor: constraints.slotSystem?.slot1Seniorities?.includes(seniority) ? 'var(--primary)' : 'var(--surface-container-highest)',
+                                                color: constraints.slotSystem?.slot1Seniorities?.includes(seniority) ? 'var(--on-primary)' : 'var(--on-surface)'
+                                            }}
+                                        >
                                             <input
                                                 type="checkbox"
                                                 checked={constraints.slotSystem?.slot1Seniorities?.includes(seniority) || false}
@@ -269,25 +204,17 @@ const ConstraintsForm = ({ constraints, setConstraints, tasks, setTasks }) => {
                                 </div>
                             </div>
 
-                            {/* Slot 2 */}
                             <div>
-                                <h4 style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: '#8b5cf6' }}>📌 Slot 2 (2. Nöbetçi)</h4>
+                                <h4 style={{ color: 'var(--tertiary)', fontSize: '0.9rem' }}>📌 Slot 2 (2. Nöbetçi)</h4>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                                     {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map(seniority => (
-                                        <label key={`s2-${seniority}`} style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            width: '32px',
-                                            height: '32px',
-                                            borderRadius: '50%',
-                                            border: `1px solid ${constraints.slotSystem?.slot2Seniorities?.includes(seniority) ? '#8b5cf6' : 'var(--color-border)'}`,
-                                            backgroundColor: constraints.slotSystem?.slot2Seniorities?.includes(seniority) ? '#8b5cf6' : 'transparent',
-                                            color: constraints.slotSystem?.slot2Seniorities?.includes(seniority) ? 'white' : 'var(--color-text)',
-                                            cursor: 'pointer',
-                                            fontSize: '0.85rem',
-                                            fontWeight: '600'
-                                        }}>
+                                        <label key={`s2-${seniority}`}
+                                            className="seniority-circle"
+                                            style={{
+                                                backgroundColor: constraints.slotSystem?.slot2Seniorities?.includes(seniority) ? 'var(--tertiary)' : 'var(--surface-container-highest)',
+                                                color: constraints.slotSystem?.slot2Seniorities?.includes(seniority) ? 'var(--on-primary)' : 'var(--on-surface)'
+                                            }}
+                                        >
                                             <input
                                                 type="checkbox"
                                                 checked={constraints.slotSystem?.slot2Seniorities?.includes(seniority) || false}
@@ -309,7 +236,7 @@ const ConstraintsForm = ({ constraints, setConstraints, tasks, setTasks }) => {
                                 </div>
                             </div>
 
-                            <p style={{ gridColumn: '1 / -1', margin: '10px 0 0 0', fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                            <p style={{ gridColumn: '1 / -1', margin: '10px 0 0 0', fontSize: '0.78rem', color: 'var(--on-surface-variant)' }}>
                                 ⚠️ Slotlar birbirinden bağımsızdır. Eğer bir slot için uygun personel bulunamazsa, o pozisyon boş kalır.
                             </p>
                         </div>
@@ -318,9 +245,9 @@ const ConstraintsForm = ({ constraints, setConstraints, tasks, setTasks }) => {
             </div>
 
             {/* Task Columns */}
-            <div style={{ gridColumn: '1 / -1', marginTop: '10px', padding: '16px', backgroundColor: 'var(--color-bg)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
-                <h4 style={{ margin: '0 0 12px 0', fontSize: '1rem' }}>📋 Görev Sütunları</h4>
-                <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: '12px' }}>
+            <div className="settings-section" style={{ marginTop: '20px' }}>
+                <h4>📋 Görev Sütunları</h4>
+                <p style={{ fontSize: '0.82rem', color: 'var(--on-surface-variant)', marginBottom: '12px' }}>
                     "Görevler" sekmesinde görünecek sütunları buradan belirleyebilirsiniz (Örn: Ameliyat 1, Servis, Poliklinik vb.).
                 </p>
 
@@ -329,7 +256,7 @@ const ConstraintsForm = ({ constraints, setConstraints, tasks, setTasks }) => {
                         type="text"
                         id="newTaskColumn"
                         placeholder="Yeni sütun adı..."
-                        style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid var(--color-border)' }}
+                        style={{ flex: 1 }}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter') {
                                 const val = e.target.value.trim();
@@ -355,32 +282,22 @@ const ConstraintsForm = ({ constraints, setConstraints, tasks, setTasks }) => {
                                 }
                             }
                         }}
-                        className="btn btn-primary"
-                        style={{ padding: '8px 16px' }}
+                        className="btn btn-primary btn-sm"
                     >
                         Ekle
                     </button>
                 </div>
 
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                     {(constraints.taskColumns || []).map((col, idx) => (
-                        <div key={idx} style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            padding: '6px 10px',
-                            background: 'var(--color-surface)',
-                            border: '1px solid var(--color-border)',
-                            borderRadius: '6px',
-                            fontSize: '0.9rem'
-                        }}>
+                        <div key={idx} className="task-col-tag">
                             <span>{col}</span>
                             <button
+                                className="task-col-remove"
                                 onClick={() => {
                                     const currentCols = constraints.taskColumns || [];
                                     const newCols = currentCols.filter((_, i) => i !== idx);
 
-                                    // 1. Cleanup taskColumnConfig
                                     const newConfig = {};
                                     Object.keys(constraints.taskColumnConfig || {}).forEach(key => {
                                         const k = parseInt(key);
@@ -391,7 +308,6 @@ const ConstraintsForm = ({ constraints, setConstraints, tasks, setTasks }) => {
                                         }
                                     });
 
-                                    // 2. Cleanup hiddenTaskColumns
                                     const newHidden = (constraints.hiddenTaskColumns || [])
                                         .filter(i => i !== idx)
                                         .map(i => i > idx ? i - 1 : i);
@@ -403,7 +319,6 @@ const ConstraintsForm = ({ constraints, setConstraints, tasks, setTasks }) => {
                                         hiddenTaskColumns: newHidden
                                     });
 
-                                    // 3. Cleanup tasks data
                                     if (typeof setTasks === 'function') {
                                         setTasks(prev => {
                                             const newTasks = {};
@@ -426,15 +341,6 @@ const ConstraintsForm = ({ constraints, setConstraints, tasks, setTasks }) => {
                                         });
                                     }
                                 }}
-                                style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    color: '#ef4444',
-                                    padding: '0 2px',
-                                    fontSize: '1rem',
-                                    lineHeight: 1
-                                }}
                             >
                                 ×
                             </button>
@@ -444,17 +350,15 @@ const ConstraintsForm = ({ constraints, setConstraints, tasks, setTasks }) => {
             </div>
 
             {/* Shift Column Names */}
-            <div style={{ gridColumn: '1 / -1', marginTop: '10px', padding: '16px', backgroundColor: 'var(--color-bg)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
-                <h4 style={{ margin: '0 0 12px 0', fontSize: '1rem' }}>🏷️ Nöbetçi Sütun İsimleri</h4>
-                <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: '12px' }}>
+            <div className="settings-section" style={{ marginTop: '16px' }}>
+                <h4>🏷️ Nöbetçi Sütun İsimleri</h4>
+                <p style={{ fontSize: '0.82rem', color: 'var(--on-surface-variant)', marginBottom: '12px' }}>
                     Görev dağılımı tablosunda görünecek nöbetçi sütun isimlerini özelleştirin.
                 </p>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
                     {(constraints.shiftColumnNames || ['Nöbetçi 1', 'Nöbetçi 2']).map((name, idx) => (
                         <div key={idx}>
-                            <label style={{ fontSize: '0.85rem', marginBottom: '4px', display: 'block' }}>
-                                Sütun {idx + 1}
-                            </label>
+                            <label>Sütun {idx + 1}</label>
                             <input
                                 type="text"
                                 value={name}
@@ -463,7 +367,6 @@ const ConstraintsForm = ({ constraints, setConstraints, tasks, setTasks }) => {
                                     newNames[idx] = e.target.value;
                                     setConstraints({ ...constraints, shiftColumnNames: newNames });
                                 }}
-                                style={{ width: '100%' }}
                             />
                         </div>
                     ))}

@@ -4,7 +4,7 @@ const TaskColumnConfig = ({ columnIndex, columnName, constraints, setConstraints
     const config = constraints.taskColumnConfig?.[columnIndex] || {
         eligibleStaffIds: [],
         eligibleSeniorities: [],
-        targetWeekdays: [1, 3, 4, 5], // Mon, Wed, Thu, Fri
+        targetWeekdays: [1, 3, 4, 5],
         maxPerDay: 3,
         preferredSeniorityMix: []
     };
@@ -60,7 +60,6 @@ const TaskColumnConfig = ({ columnIndex, columnName, constraints, setConstraints
         );
     };
 
-    // Group staff by seniority
     const staffBySeniority = {};
     staffList.forEach(staff => {
         if (!staffBySeniority[staff.seniority]) {
@@ -70,63 +69,34 @@ const TaskColumnConfig = ({ columnIndex, columnName, constraints, setConstraints
     });
 
     return (
-        <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.8)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '20px'
-        }}>
-            <div style={{
-                background: 'var(--color-surface)',
-                padding: '24px',
-                borderRadius: '12px',
-                maxWidth: '600px',
-                width: '100%',
-                maxHeight: '90vh',
-                overflowY: 'auto',
-                border: '1px solid var(--color-border)'
-            }}>
-                <h3 style={{ margin: '0 0 16px 0' }}>"{columnName}" Sütunu Ayarları</h3>
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+                <h3 style={{ marginBottom: '20px' }}>"{columnName}" Sütunu Ayarları</h3>
 
                 {/* Selection Mode */}
-                <div style={{ marginBottom: '20px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                        Seçim Modu
-                    </label>
-                    <div style={{ display: 'flex', gap: '12px' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-                            <input
-                                type="radio"
-                                checked={selectionMode === 'seniority'}
-                                onChange={() => setSelectionMode('seniority')}
-                            />
-                            <span>Kıdeme Göre</span>
-                        </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-                            <input
-                                type="radio"
-                                checked={selectionMode === 'individual'}
-                                onChange={() => setSelectionMode('individual')}
-                            />
-                            <span>Kişi Bazlı</span>
-                        </label>
+                <div className="settings-section" style={{ marginBottom: '16px' }}>
+                    <h4>Seçim Modu</h4>
+                    <div className="mode-btn-group">
+                        <button
+                            className={`mode-btn${selectionMode === 'seniority' ? ' active-required' : ''}`}
+                            onClick={() => setSelectionMode('seniority')}
+                        >
+                            Kıdeme Göre
+                        </button>
+                        <button
+                            className={`mode-btn${selectionMode === 'individual' ? ' active-required' : ''}`}
+                            onClick={() => setSelectionMode('individual')}
+                        >
+                            Kişi Bazlı
+                        </button>
                     </div>
                 </div>
 
                 {/* Seniority Selection */}
                 {selectionMode === 'seniority' && (
-                    <div style={{ marginBottom: '20px' }}>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                            Dahil Edilecek Kıdemler
-                        </label>
-                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={{ marginBottom: '8px' }}>Dahil Edilecek Kıdemler</label>
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                             {Object.keys(staffBySeniority).sort((a, b) => b - a).map(seniority => {
                                 const sen = parseInt(seniority);
                                 const isSelected = selectedSeniorities.includes(sen);
@@ -134,17 +104,14 @@ const TaskColumnConfig = ({ columnIndex, columnName, constraints, setConstraints
                                     <button
                                         key={sen}
                                         onClick={() => toggleSeniority(sen)}
+                                        className="day-pill"
                                         style={{
-                                            padding: '8px 12px',
-                                            borderRadius: '6px',
-                                            border: `2px solid ${isSelected ? 'var(--color-primary)' : 'var(--color-border)'}`,
-                                            background: isSelected ? 'var(--color-primary)' : 'transparent',
-                                            color: isSelected ? 'white' : 'var(--color-text)',
-                                            cursor: 'pointer',
-                                            fontWeight: '600'
+                                            background: isSelected ? 'rgba(102, 217, 204, 0.2)' : undefined,
+                                            color: isSelected ? 'var(--primary)' : undefined,
+                                            padding: '8px 12px'
                                         }}
                                     >
-                                        Kıdem {sen} ({staffBySeniority[sen].length})
+                                        K{sen} ({staffBySeniority[sen].length})
                                     </button>
                                 );
                             })}
@@ -154,11 +121,9 @@ const TaskColumnConfig = ({ columnIndex, columnName, constraints, setConstraints
 
                 {/* Individual Selection */}
                 {selectionMode === 'individual' && (
-                    <div style={{ marginBottom: '20px' }}>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                            Dahil Edilecek Kişiler
-                        </label>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '8px' }}>
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={{ marginBottom: '8px' }}>Dahil Edilecek Kişiler</label>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '6px' }}>
                             {staffList.map(staff => {
                                 const isSelected = selectedStaffIds.includes(staff.id);
                                 return (
@@ -169,18 +134,20 @@ const TaskColumnConfig = ({ columnIndex, columnName, constraints, setConstraints
                                             alignItems: 'center',
                                             gap: '6px',
                                             padding: '6px 10px',
-                                            borderRadius: '6px',
-                                            background: isSelected ? 'var(--color-surface-hover)' : 'var(--color-bg)',
+                                            borderRadius: 'var(--radius-md)',
+                                            background: isSelected ? 'rgba(102, 217, 204, 0.1)' : 'var(--surface-container)',
                                             cursor: 'pointer',
-                                            border: `1px solid ${isSelected ? 'var(--color-primary)' : 'var(--color-border)'}`
+                                            fontSize: '0.82rem',
+                                            transition: 'background 0.15s'
                                         }}
                                     >
                                         <input
                                             type="checkbox"
                                             checked={isSelected}
                                             onChange={() => toggleStaff(staff.id)}
+                                            style={{ accentColor: 'var(--primary)' }}
                                         />
-                                        <span style={{ fontSize: '0.85rem' }}>{staff.name}</span>
+                                        <span>{staff.name}</span>
                                     </label>
                                 );
                             })}
@@ -189,27 +156,17 @@ const TaskColumnConfig = ({ columnIndex, columnName, constraints, setConstraints
                 )}
 
                 {/* Target Weekdays */}
-                <div style={{ marginBottom: '20px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                        Hedef Günler
-                    </label>
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <div style={{ marginBottom: '16px' }}>
+                    <label style={{ marginBottom: '8px' }}>Hedef Günler</label>
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                         {weekdayNames.map((name, idx) => {
                             const isSelected = targetWeekdays.includes(idx);
                             return (
                                 <button
                                     key={idx}
                                     onClick={() => toggleWeekday(idx)}
-                                    style={{
-                                        padding: '8px 12px',
-                                        borderRadius: '6px',
-                                        border: `2px solid ${isSelected ? 'var(--color-primary)' : 'var(--color-border)'}`,
-                                        background: isSelected ? 'var(--color-primary)' : 'transparent',
-                                        color: isSelected ? 'white' : 'var(--color-text)',
-                                        cursor: 'pointer',
-                                        fontWeight: '600',
-                                        fontSize: '0.85rem'
-                                    }}
+                                    className={`day-pill${isSelected ? ' active' : ''}`}
+                                    style={{ padding: '8px 12px' }}
                                 >
                                     {name}
                                 </button>
@@ -219,10 +176,8 @@ const TaskColumnConfig = ({ columnIndex, columnName, constraints, setConstraints
                 </div>
 
                 {/* Max Per Day */}
-                <div style={{ marginBottom: '20px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                        Günlük Maksimum Kişi Sayısı
-                    </label>
+                <div style={{ marginBottom: '16px' }}>
+                    <label>Günlük Maksimum Kişi Sayısı</label>
                     <input
                         type="number"
                         value={maxPerDay}
@@ -235,17 +190,14 @@ const TaskColumnConfig = ({ columnIndex, columnName, constraints, setConstraints
 
                 {/* Preferred Seniority Mix */}
                 <div style={{ marginBottom: '20px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                        Tercih Edilen Kıdem Karışımı (opsiyonel)
-                    </label>
+                    <label>Tercih Edilen Kıdem Karışımı (opsiyonel)</label>
                     <input
                         type="text"
                         value={preferredMix}
                         onChange={(e) => setPreferredMix(e.target.value)}
                         placeholder="Örn: 7,5,4"
-                        style={{ width: '100%' }}
                     />
-                    <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>
+                    <p style={{ fontSize: '0.72rem', color: 'var(--on-surface-variant)', marginTop: '4px' }}>
                         Her güne bu kıdemlerden birer kişi atamaya çalışır (virgülle ayırın)
                     </p>
                 </div>
